@@ -20,11 +20,7 @@
 </head>
 <body>
 
-<header class="site-header">
-  <div class="container header-inner">
-    <a href="/" class="site-logo">🛍️ MiniLoja</a>
-  </div>
-</header>
+<div id="header-root"></div>
 
 <main class="container">
   <div class="card result-box" id="result-box">
@@ -46,49 +42,43 @@
 
 <div id="toast"></div>
 
+<script src="/js/site-config.js"></script>
+<script src="/js/header.js"></script>
 <script>
-  const params = new URLSearchParams(window.location.search);
+  renderHeader({ backLink: { href: '/', label: '← Voltar à Loja' } });
 
-  // O MP envia collection_status=approved|rejected|pending
-  // Também pode vir ?status=rejected quando redirecionado manualmente
+  const params   = new URLSearchParams(window.location.search);
   const mpStatus = params.get('collection_status') || params.get('status') || 'pending';
   const code     = params.get('external_reference') || params.get('code') || '';
 
   const states = {
     approved: {
-      icon:  '🎉',
-      title: 'Pagamento Aprovado!',
-      desc:  'Seu pedido foi confirmado e está sendo preparado.',
-      cls:   'status-approved',
+      icon: '🎉', title: 'Pagamento Aprovado!',
+      desc: 'Seu pedido foi confirmado e está sendo preparado.',
+      cls: 'status-approved',
       actions: `
         <a href="/track.html" class="btn btn-primary">🔍 Acompanhar Pedido</a>
-        <a href="/" class="btn btn-secondary">🛍️ Continuar Comprando</a>
-      `,
+        <a href="/" class="btn btn-secondary">🛍️ Continuar Comprando</a>`,
     },
     rejected: {
-      icon:  '❌',
-      title: 'Pagamento Recusado',
-      desc:  'Não foi possível processar seu pagamento. Tente novamente ou use outro meio de pagamento.',
-      cls:   'status-rejected',
+      icon: '❌', title: 'Pagamento Recusado',
+      desc: 'Não foi possível processar seu pagamento. Tente novamente ou use outro meio de pagamento.',
+      cls: 'status-rejected',
       actions: `
         <a href="/checkout.html" class="btn btn-primary">🔄 Tentar Novamente</a>
-        <a href="/" class="btn btn-secondary">🛍️ Voltar à Loja</a>
-      `,
+        <a href="/" class="btn btn-secondary">🛍️ Voltar à Loja</a>`,
     },
     pending: {
-      icon:  '⏳',
-      title: 'Pagamento Pendente',
-      desc:  'Seu pagamento está sendo processado. Você receberá uma confirmação em breve.',
-      cls:   'status-pending',
+      icon: '⏳', title: 'Pagamento Pendente',
+      desc: 'Seu pagamento está sendo processado. Você receberá uma confirmação em breve.',
+      cls: 'status-pending',
       actions: `
         <a href="/track.html" class="btn btn-primary">🔍 Acompanhar Pedido</a>
-        <a href="/" class="btn btn-secondary">🛍️ Voltar à Loja</a>
-      `,
+        <a href="/" class="btn btn-secondary">🛍️ Voltar à Loja</a>`,
     },
   };
 
   const state = states[mpStatus] || states.pending;
-
   document.getElementById('result-icon').textContent  = state.icon;
   document.getElementById('result-title').textContent = state.title;
   document.getElementById('result-title').className   = state.cls;
@@ -96,8 +86,8 @@
   document.getElementById('result-actions').innerHTML = state.actions;
 
   if (code) {
-    document.getElementById('order-code').textContent = code;
     document.getElementById('code-section').style.display = 'block';
+    document.getElementById('order-code').textContent = code;
   }
 
   function copyCode() {

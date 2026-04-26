@@ -8,14 +8,7 @@
 </head>
 <body>
 
-<header class="site-header">
-  <div class="container header-inner">
-    <a href="/" class="site-logo">🛍️ MiniLoja</a>
-    <nav class="header-nav">
-      <a href="/">← Voltar</a>
-    </nav>
-  </div>
-</header>
+<div id="header-root"></div>
 
 <main class="container page-content">
   <div class="track-box">
@@ -37,10 +30,13 @@
   </div>
 </main>
 
+<script src="/js/site-config.js"></script>
+<script src="/js/header.js"></script>
 <script>
+  renderHeader({ backLink: { href: '/', label: '← Voltar' } });
+
   let currentTab = 'code';
 
-  // Pre-fill from URL
   const urlCode = new URLSearchParams(window.location.search).get('code');
   if (urlCode) {
     document.getElementById('search-input').value = urlCode;
@@ -65,22 +61,7 @@
     }
     input.value = '';
     document.getElementById('results').innerHTML = '';
-  }
-
-  const STATUS_LABEL = {
-    PENDING: 'Pendente', CONFIRMED: 'Confirmado', PREPARING: 'Preparando',
-    SHIPPED: 'Enviado', DELIVERED: 'Entregue', CANCELLED: 'Cancelado',
-  };
-  const PAY_LABEL = {
-    PENDING: 'Aguardando', APPROVED: 'Aprovado', REJECTED: 'Recusado',
-    REFUNDED: 'Reembolsado', CANCELLED: 'Cancelado',
-  };
-
-  function badgeClass(status) {
-    const map = { APPROVED:'approved',REJECTED:'rejected',CANCELLED:'cancelled',
-      CONFIRMED:'confirmed',PREPARING:'preparing',SHIPPED:'shipped',
-      DELIVERED:'delivered',REFUNDED:'refunded',PENDING:'pending' };
-    return 'badge badge-' + (map[status] || 'pending');
+    document.getElementById('err-search').textContent = '';
   }
 
   function fmt(val) {
@@ -91,68 +72,53 @@
     return new Date(dt).toLocaleDateString('pt-BR', { day:'2-digit', month:'2-digit', year:'numeric', hour:'2-digit', minute:'2-digit' });
   }
 
+  const STATUS_LABEL = {
+    PENDING:'Pendente', CONFIRMED:'Confirmado', PREPARING:'Preparando',
+    SHIPPED:'Enviado', DELIVERED:'Entregue', CANCELLED:'Cancelado',
+  };
+  const PAY_LABEL = { PENDING:'Aguardando', APPROVED:'Aprovado', REJECTED:'Recusado', REFUNDED:'Reembolsado', CANCELLED:'Cancelado' };
+
   async function search() {
-    const value = document.getElementById('search-input').value
-      .replace(/\D/g, currentTab === 'phone' ? '' : undefined)
-      ?.trim() || document.getElementById('search-input').value.trim().toUpperCase();
+    const input = document.getElementById('search-input').value.trim();
+    const err   = document.getElementById('err-search');
+    err.textContent = '';
+    if (!input) { err.textContent = 'Informe um valor para busca.'; return; }
 
-    document.getElementById('err-search').textContent = '';
-    document.getElementById('results').innerHTML = '<p style="color:var(--muted)">Buscando…</p>';
+    const url = currentTab === 'code'
+      ? `/api/track/order/${encodeURIComponent(input.toUpperCase())}`
+      : `/api/track/phone/${encodeURIComponent(input.replace(/\D/g,''))}`;
 
-    if (!value) {
-      document.getElementById('err-search').textContent = 'Preencha o campo de busca.';
-      document.getElementById('results').innerHTML = '';
-      return;
-    }
+    const res  = await fetch(url);
+    const data = await res.json();
+    const results = document.getElementById('results');
 
-    try {
-      const res = await fetch('/api/track', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ value, type: currentTab }),
-      });
-      const data = await res.json();
+    if (!res.ok) { err.textContent = data.error || 'Pedido não encontrado.'; results.innerHTML = ''; return; }
 
-      if (!res.ok) {
-        document.getElementById('err-search').textContent = data.error;
-        document.getElementById('results').innerHTML = '';
-        return;
-      }
-
-      const { orders } = data;
-
-      if (!orders.length) {
-        document.getElementById('results').innerHTML =
-          '<p style="color:var(--muted);text-align:center;padding:2rem 0">Nenhum pedido encontrado.</p>';
-        return;
-      }
-
-      document.getElementById('results').innerHTML = orders.map(o => `
-        <div class="card track-order-card">
-          <div class="track-order-header">
-            <span class="track-order-code">${o.code}</span>
-            <span style="font-size:.8rem;color:var(--muted)">${fmtDate(o.created_at)}</span>
-          </div>
-          <div style="display:flex;gap:.5rem;flex-wrap:wrap;margin-bottom:.75rem">
-            <span class="${badgeClass(o.order_status)}">${STATUS_LABEL[o.order_status] || o.order_status}</span>
-            <span class="${badgeClass(o.payment_status)}">${PAY_LABEL[o.payment_status] || o.payment_status}</span>
-          </div>
-          <div class="track-items">
-            ${o.items.map(i => `${i.product_name}${i.variation_label ? ` (${i.variation_label})` : ''} × ${i.quantity}`).join(' · ')}
-          </div>
-          <div style="font-weight:700;margin-top:.5rem">${fmt(o.total)}</div>
+    const orders = Array.isArray(data) ? data : [data];
+    results.innerHTML = orders.map(o => `
+      <div class="card" style="padding:1.25rem;margin-bottom:1rem">
+        <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:.5rem">
+          <strong style="font-size:1rem;letter-spacing:.03em">${o.code}</strong>
+          <span class="badge badge-${(o.payment_status||'').toLowerCase()}">${PAY_LABEL[o.payment_status] || o.payment_status}</span>
         </div>
-      `).join('');
-
-    } catch {
-      document.getElementById('err-search').textContent = 'Erro ao buscar pedidos.';
-      document.getElementById('results').innerHTML = '';
-    }
+        <div style="margin-top:.5rem;font-size:.875rem;color:var(--muted)">${fmtDate(o.created_at)}</div>
+        <div style="margin-top:.75rem">
+          ${(o.items||[]).map(i => `
+            <div style="display:flex;justify-content:space-between;font-size:.875rem;padding:.3rem 0;border-bottom:1px solid var(--border)">
+              <span>${i.product_name}${i.variation_label ? ` (${i.variation_label})` : ''} × ${i.quantity}</span>
+              <span>${fmt(i.unit_price * i.quantity)}</span>
+            </div>
+          `).join('')}
+        </div>
+        <div style="display:flex;justify-content:space-between;font-weight:700;margin-top:.75rem">
+          <span>Total</span><span>${fmt(o.total)}</span>
+        </div>
+        <div style="margin-top:.5rem;font-size:.8rem;color:var(--muted)">
+          Status: ${STATUS_LABEL[o.order_status] || o.order_status}
+        </div>
+      </div>
+    `).join('');
   }
-
-  document.getElementById('search-input').addEventListener('keydown', e => {
-    if (e.key === 'Enter') search();
-  });
 </script>
 </body>
 </html>

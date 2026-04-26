@@ -6,120 +6,30 @@
   <title>MiniLoja</title>
   <link rel="stylesheet" href="/css/style.css">
   <style>
-    /* ── Lightbox ─────────────────────────────────────────────────────────── */
-    #lightbox {
-      position: fixed; inset: 0; z-index: 1000;
-      display: flex; align-items: center; justify-content: center;
-      background: rgba(0,0,0,.92);
-      opacity: 0; pointer-events: none; transition: opacity .2s;
+    .category-filter {
+      display: flex;
+      gap: .5rem;
+      flex-wrap: wrap;
+      margin-bottom: 1.5rem;
     }
-    #lightbox.open { opacity: 1; pointer-events: all; }
-
-    .lb-content {
-      position: relative;
-      display: flex; flex-direction: column; align-items: center;
-      max-width: min(90vw, 860px);
-      max-height: 90vh;
+    .cat-pill {
+      padding: .35rem .85rem;
+      border-radius: 99px;
+      border: 1px solid var(--border);
+      background: var(--surface);
+      font-size: .85rem;
+      cursor: pointer;
+      transition: all .15s;
+      color: var(--text);
     }
-
-    .lb-img-wrap {
-      position: relative;
-      display: flex; align-items: center; justify-content: center;
-    }
-    #lb-img {
-      max-width: 100%; max-height: 78vh;
-      object-fit: contain;
-      border-radius: 8px;
-      user-select: none;
-      transition: opacity .18s;
-    }
-    #lb-img.fading { opacity: 0; }
-
-    .lb-nav {
-      position: absolute; top: 50%; transform: translateY(-50%);
-      background: rgba(255,255,255,.15); border: none; border-radius: 50%;
-      width: 44px; height: 44px; font-size: 1.4rem; color: #fff;
-      display: flex; align-items: center; justify-content: center;
-      cursor: pointer; backdrop-filter: blur(4px); transition: background .15s;
-    }
-    .lb-nav:hover { background: rgba(255,255,255,.3); }
-    #lb-prev { left: -56px; }
-    #lb-next { right: -56px; }
-    @media (max-width: 600px) {
-      #lb-prev { left: 4px; }
-      #lb-next { right: 4px; }
-    }
-
-    .lb-close {
-      position: fixed; top: 1.25rem; right: 1.25rem;
-      background: rgba(255,255,255,.15); border: none; border-radius: 50%;
-      width: 40px; height: 40px; font-size: 1.2rem; color: #fff;
-      display: flex; align-items: center; justify-content: center;
-      cursor: pointer; backdrop-filter: blur(4px); transition: background .15s;
-    }
-    .lb-close:hover { background: rgba(255,255,255,.3); }
-
-    .lb-dots {
-      display: flex; gap: .45rem; margin-top: .85rem; justify-content: center;
-    }
-    .lb-dot {
-      width: 8px; height: 8px; border-radius: 50%;
-      background: rgba(255,255,255,.35); cursor: pointer;
-      transition: background .15s, transform .15s;
-      border: none;
-    }
-    .lb-dot.active { background: #fff; transform: scale(1.3); }
-
-    .lb-counter {
-      color: rgba(255,255,255,.6); font-size: .8rem; margin-top: .4rem;
-    }
-
-    /* Multi-image card thumbnails */
-    .product-thumbs {
-      display: flex; gap: .35rem; padding: .4rem .5rem;
-      background: rgba(0,0,0,.04);
-    }
-    .product-thumb-btn {
-      width: 36px; height: 36px; border-radius: 4px;
-      border: 2px solid transparent; overflow: hidden; cursor: pointer; padding: 0; background: none;
-      flex-shrink: 0; transition: border-color .15s;
-    }
-    .product-thumb-btn.active { border-color: var(--accent); }
-    .product-thumb-btn img { width: 100%; height: 100%; object-fit: cover; display: block; }
-
-    /* Product card image wrapper */
-    .product-card-img-wrap {
-      position: relative; overflow: hidden; cursor: zoom-in;
-    }
-    .product-card-img-wrap img {
-      width: 100%; height: 220px; object-fit: cover;
-      transition: transform .25s;
-    }
-    .product-card-img-wrap:hover img { transform: scale(1.04); }
-    .product-card-img-wrap .zoom-hint {
-      position: absolute; bottom: .5rem; right: .5rem;
-      background: rgba(0,0,0,.5); color: #fff;
-      font-size: .7rem; padding: .2rem .45rem; border-radius: 4px;
-      opacity: 0; transition: opacity .15s; pointer-events: none;
-    }
-    .product-card-img-wrap:hover .zoom-hint { opacity: 1; }
+    .cat-pill:hover { border-color: var(--accent); color: var(--accent); }
+    .cat-pill.active { background: var(--accent); border-color: var(--accent); color: #fff; }
   </style>
 </head>
 <body>
 
-<header class="site-header">
-  <div class="container header-inner">
-    <a href="/" class="site-logo">
-      <img src="/img/logo/logoipsum-3-write.png" alt="MiniLoja" style="height:36px;width:auto;display:block;">
-    </a>
-    <nav class="header-nav">
-      <a href="/track.html">Meus Pedidos</a>
-      <button class="cart-btn" onclick="openDrawer()">
-        🛒 Carrinho <span class="cart-count">0</span>
-      </button>
-    </nav>
-  </div>
-</header>
+<!-- Header injetado pelo componente centralizado -->
+<div id="header-root"></div>
 
 <!-- Cart Drawer -->
 <div class="drawer-overlay" id="cart-overlay" onclick="closeDrawer()"></div>
@@ -130,7 +40,7 @@
   </div>
   <div class="drawer-body" id="cart-body"></div>
   <div class="drawer-footer">
-    <div style="display:flex;justify-content:space-between;font-weight:700;margin-bottom:.75rem">
+    <div class="cart-total" id="cart-total-row" style="display:flex;justify-content:space-between;font-weight:700;margin-bottom:.75rem">
       <span>Total</span><span id="cart-total"></span>
     </div>
     <a href="/checkout.html" id="cart-checkout-btn" class="btn btn-primary btn-full btn-lg" disabled>
@@ -141,95 +51,104 @@
 
 <main class="container page-content">
   <h1 class="section-title">Nossos Produtos</h1>
+
+  <!-- Filtro de categorias (renderizado dinamicamente) -->
+  <div class="category-filter" id="category-filter"></div>
+
   <div class="products-grid" id="products-grid">
     <p style="color:var(--muted)">Carregando produtos…</p>
   </div>
 </main>
 
-<!-- Lightbox -->
-<div id="lightbox" role="dialog" aria-modal="true" aria-label="Visualização de imagem">
-  <div class="lb-content">
-    <div class="lb-img-wrap">
-      <button class="lb-nav" id="lb-prev" onclick="lbNav(-1)" aria-label="Anterior">‹</button>
-      <img id="lb-img" src="" alt="Imagem ampliada">
-      <button class="lb-nav" id="lb-next" onclick="lbNav(1)" aria-label="Próxima">›</button>
-    </div>
-    <div class="lb-dots" id="lb-dots"></div>
-    <div class="lb-counter" id="lb-counter"></div>
-  </div>
-  <button class="lb-close" onclick="closeLightbox()" aria-label="Fechar">✕</button>
-</div>
-
 <div id="toast"></div>
 
+<script src="/js/site-config.js"></script>
+<script src="/js/header.js"></script>
 <script src="/js/cart.js"></script>
 <script>
-  let products = [];
+  // Renderiza o header com carrinho
+  renderHeader({ showCart: true });
 
-  // ── Toast ─────────────────────────────────────────────────────────────────
+  let allProducts  = [];
+  let allCategories = [];
+  let activeCategory = null;
+
+  function fmt(val) {
+    return new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(val);
+  }
+
   function showToast(msg) {
     const t = document.getElementById('toast');
-    t.textContent = msg; t.classList.add('show');
+    t.textContent = msg;
+    t.classList.add('show');
     setTimeout(() => t.classList.remove('show'), 2500);
   }
 
-  // ── Render ────────────────────────────────────────────────────────────────
+  // ── Filtro de categorias ──────────────────────────────────────────────────
+  function renderCategoryFilter() {
+    const container = document.getElementById('category-filter');
+    if (!allCategories.length) { container.style.display = 'none'; return; }
+
+    const pills = [
+      `<button class="cat-pill ${activeCategory === null ? 'active' : ''}"
+               onclick="setCategory(null)">Todos</button>`,
+      ...allCategories.map(c =>
+        `<button class="cat-pill ${activeCategory === c.id ? 'active' : ''}"
+                 onclick="setCategory(${c.id})">${c.name}</button>`
+      ),
+    ];
+    container.innerHTML = pills.join('');
+  }
+
+  function setCategory(id) {
+    activeCategory = id;
+    renderCategoryFilter();
+    renderProducts();
+  }
+
+  // ── Grid de produtos ───────────────────────────────────────────────────────
   function renderProducts() {
     const grid = document.getElementById('products-grid');
-    if (!products.length) {
+    const list = activeCategory === null
+      ? allProducts
+      : allProducts.filter(p => p.category_id === activeCategory);
+
+    if (!list.length) {
       grid.innerHTML = '<p style="color:var(--muted)">Nenhum produto disponível.</p>';
       return;
     }
 
-    grid.innerHTML = products.map(p => {
+    grid.innerHTML = list.map(p => {
       const hasVariations = p.variations && p.variations.length > 0;
-      const isMTO         = !!p.made_to_order;
-      const semEstoque    = !isMTO && !hasVariations && p.stock <= 0;
-      const imgs          = p.images?.length ? p.images : (p.image_url ? [p.image_url] : []);
-      const primaryImg    = imgs[0] || 'https://via.placeholder.com/400x220?text=Sem+Imagem';
-      const imgsJson      = JSON.stringify(imgs).replace(/"/g,'&quot;');
-
-      const thumbsHtml = imgs.length > 1 ? `
-        <div class="product-thumbs">
-          ${imgs.map((u,i) => `
-            <button class="product-thumb-btn ${i===0?'active':''}"
-                    onclick="switchCardImg(event,${p.id},${i})"
-                    data-pid="${p.id}" data-idx="${i}">
-              <img src="${u}" alt="">
-            </button>
-          `).join('')}
-        </div>` : '';
+      const semEstoque    = !hasVariations && p.stock <= 0;
 
       return `
         <div class="card product-card">
-          <div class="product-card-img-wrap"
-               onclick="openLightbox(${p.id},0)"
-               data-images="${imgsJson}">
-            <img id="pimg-${p.id}" src="${primaryImg}" alt="${p.name}">
-            <span class="zoom-hint">🔍 Ampliar</span>
-          </div>
-          ${thumbsHtml}
+          <img src="${p.image_url || 'https://via.placeholder.com/400x220?text=Sem+Imagem'}" alt="${p.name}">
           <div class="product-card-body">
+            ${p.category_name ? `<div style="font-size:.75rem;color:var(--accent);font-weight:600;margin-bottom:.25rem;text-transform:uppercase;letter-spacing:.05em">${p.category_name}</div>` : ''}
             <div class="product-card-name">${p.name}</div>
             ${p.description ? `<div class="product-card-desc">${p.description}</div>` : ''}
-            ${isMTO ? `<div style="font-size:.75rem;font-weight:600;color:#7c3aed;margin:.3rem 0 0">📋 Sob encomenda</div>` : ''}
             <div class="product-card-price">${fmt(p.price)}</div>
 
             ${hasVariations ? `
               <div class="size-selector" id="sizes-${p.id}">
                 ${p.variations.map(v => `
-                  <button class="size-btn"
-                    data-pid="${p.id}" data-vid="${v.id}" data-label="${v.label}"
-                    ${(!isMTO && v.stock <= 0) ? 'disabled style="opacity:.4;cursor:not-allowed"' : ''}
+                  <button class="size-btn" data-pid="${p.id}" data-vid="${v.id}" data-label="${v.label}"
+                    ${v.stock <= 0 ? 'disabled title="Sem estoque"' : ''}
                     onclick="selectSize(this)">${v.label}</button>
                 `).join('')}
               </div>
-              <button class="btn btn-primary btn-full" onclick="addToCart(${p.id})" id="add-btn-${p.id}" disabled>
-                Selecione um tamanho
+              <button class="btn btn-primary btn-full" style="margin-top:.75rem"
+                onclick="addWithVariation(${p.id}, '${p.name}', ${p.price})">
+                Adicionar ao Carrinho
               </button>
+            ` : semEstoque ? `
+              <button class="btn btn-primary btn-full" disabled style="margin-top:.75rem">Sem Estoque</button>
             ` : `
-              <button class="btn btn-primary btn-full" onclick="addToCart(${p.id})" ${semEstoque?'disabled':''}>
-                ${semEstoque ? 'Sem estoque' : isMTO ? 'Encomendar' : 'Adicionar ao carrinho'}
+              <button class="btn btn-primary btn-full" style="margin-top:.75rem"
+                onclick="addToCart({productId:${p.id},productName:'${p.name.replace(/'/g,"\\'")}',price:${p.price},quantity:1});showToast('Adicionado ao carrinho!')">
+                Adicionar ao Carrinho
               </button>
             `}
           </div>
@@ -237,150 +156,35 @@
     }).join('');
   }
 
-  function switchCardImg(evt, pid, idx) {
-    evt.stopPropagation();
-    const p = products.find(x => x.id === pid);
-    if (!p) return;
-    const imgs = p.images?.length ? p.images : (p.image_url ? [p.image_url] : []);
-    const img  = document.getElementById(`pimg-${pid}`);
-    if (img) img.src = imgs[idx] || imgs[0];
-    // Update active thumb
-    document.querySelectorAll(`.product-thumb-btn[data-pid="${pid}"]`).forEach((b,i) => {
-      b.classList.toggle('active', i === idx);
-    });
-  }
-
   function selectSize(btn) {
     const pid = btn.dataset.pid;
     document.querySelectorAll(`#sizes-${pid} .size-btn`).forEach(b => b.classList.remove('selected'));
     btn.classList.add('selected');
-    const addBtn = document.getElementById(`add-btn-${pid}`);
-    addBtn.disabled = false;
-    addBtn.textContent = 'Adicionar ao carrinho';
   }
 
-  function addToCart(pid) {
-    const p = products.find(x => x.id === pid);
-    if (!p) return;
-    const hasVariations = p.variations && p.variations.length > 0;
-
-    if (hasVariations) {
-      const selected = document.querySelector(`#sizes-${pid} .size-btn.selected`);
-      if (!selected) return;
-      addItem({
-        id: p.id, name: p.name, price: p.price,
-        image_url: p.image_url, images: p.images || [],
-        variationId: Number(selected.dataset.vid), variationLabel: selected.dataset.label,
-      });
-    } else {
-      addItem({ id: p.id, name: p.name, price: p.price, image_url: p.image_url, images: p.images || [] });
-    }
-    updateCartUI();
-    showToast(`${p.name} adicionado!`);
+  function addWithVariation(pid, pname, price) {
+    const sel = document.querySelector(`#sizes-${pid} .size-btn.selected`);
+    if (!sel) { showToast('Selecione um tamanho!'); return; }
+    addToCart({
+      productId: pid, productName: pname, price,
+      variationId: Number(sel.dataset.vid), variationLabel: sel.dataset.label, quantity: 1,
+    });
+    showToast('Adicionado ao carrinho!');
   }
 
-  function fmt(val) {
-    return new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(val);
+  // ── Init ──────────────────────────────────────────────────────────────────
+  async function init() {
+    const [catRes, prodRes] = await Promise.all([
+      fetch('/api/categories'),
+      fetch('/api/products'),
+    ]);
+    allCategories = await catRes.json();
+    allProducts   = await prodRes.json();
+    renderCategoryFilter();
+    renderProducts();
   }
 
-  // ── Lightbox ──────────────────────────────────────────────────────────────
-  let _lbImages = [];
-  let _lbIndex  = 0;
-
-  function openLightbox(pid, startIndex = 0) {
-    const p = products.find(x => x.id === pid);
-    if (!p) return;
-    _lbImages = p.images?.length ? p.images : (p.image_url ? [p.image_url] : []);
-    if (!_lbImages.length) return;
-    _lbIndex = startIndex;
-    renderLightbox();
-    const lb = document.getElementById('lightbox');
-    lb.classList.add('open');
-    document.body.style.overflow = 'hidden';
-    lb.focus();
-  }
-
-  function closeLightbox() {
-    document.getElementById('lightbox').classList.remove('open');
-    document.body.style.overflow = '';
-  }
-
-  function renderLightbox() {
-    const img     = document.getElementById('lb-img');
-    const dots    = document.getElementById('lb-dots');
-    const counter = document.getElementById('lb-counter');
-    const prev    = document.getElementById('lb-prev');
-    const next    = document.getElementById('lb-next');
-    const multi   = _lbImages.length > 1;
-
-    img.src = _lbImages[_lbIndex];
-
-    prev.style.display = multi ? 'flex' : 'none';
-    next.style.display = multi ? 'flex' : 'none';
-
-    dots.innerHTML = multi
-      ? _lbImages.map((_, i) =>
-          `<button class="lb-dot ${i===_lbIndex?'active':''}" onclick="lbGoto(${i})" aria-label="Imagem ${i+1}"></button>`
-        ).join('')
-      : '';
-
-    counter.textContent = multi ? `${_lbIndex + 1} / ${_lbImages.length}` : '';
-  }
-
-  function lbNav(dir) {
-    const n = _lbImages.length;
-    _lbIndex = (_lbIndex + dir + n) % n;
-    const img = document.getElementById('lb-img');
-    img.classList.add('fading');
-    setTimeout(() => {
-      img.src = _lbImages[_lbIndex];
-      img.classList.remove('fading');
-      document.getElementById('lb-dots').querySelectorAll('.lb-dot').forEach((d,i)=>d.classList.toggle('active',i===_lbIndex));
-      document.getElementById('lb-counter').textContent = _lbImages.length > 1 ? `${_lbIndex+1} / ${_lbImages.length}` : '';
-    }, 90);
-  }
-
-  function lbGoto(idx) {
-    _lbIndex = idx;
-    renderLightbox();
-  }
-
-  // Keyboard
-  document.addEventListener('keydown', e => {
-    if (!document.getElementById('lightbox').classList.contains('open')) return;
-    if (e.key === 'Escape')     closeLightbox();
-    if (e.key === 'ArrowLeft')  lbNav(-1);
-    if (e.key === 'ArrowRight') lbNav(1);
-  });
-
-  // Click backdrop
-  document.getElementById('lightbox').addEventListener('click', e => {
-    if (e.target === document.getElementById('lightbox')) closeLightbox();
-  });
-
-  // Touch swipe
-  let _lbTouchX = null;
-  document.getElementById('lightbox').addEventListener('touchstart', e => { _lbTouchX = e.touches[0].clientX; }, { passive: true });
-  document.getElementById('lightbox').addEventListener('touchend', e => {
-    if (_lbTouchX === null) return;
-    const dx = e.changedTouches[0].clientX - _lbTouchX;
-    if (Math.abs(dx) > 50) lbNav(dx < 0 ? 1 : -1);
-    _lbTouchX = null;
-  });
-
-  // ── Load ──────────────────────────────────────────────────────────────────
-  async function load() {
-    try {
-      const res = await fetch('/api/products');
-      products = await res.json();
-      renderProducts();
-    } catch {
-      document.getElementById('products-grid').innerHTML =
-        '<p style="color:var(--danger)">Erro ao carregar produtos.</p>';
-    }
-  }
-
-  load();
+  init();
 </script>
 </body>
 </html>

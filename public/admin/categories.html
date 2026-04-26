@@ -1,0 +1,153 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Categorias — Admin MiniLoja</title>
+  <link rel="stylesheet" href="/css/style.css">
+  <link rel="stylesheet" href="/admin/admin.css">
+</head>
+<body>
+<div class="admin-wrapper">
+  <div id="sidebar-root"></div>
+
+  <div class="admin-main">
+    <div class="admin-topbar">
+      <h1>Categorias</h1>
+      <button class="btn btn-primary" onclick="openModal()">+ Nova Categoria</button>
+    </div>
+
+    <div class="admin-content">
+      <div class="table-wrap">
+        <div style="overflow-x:auto">
+          <table>
+            <thead><tr>
+              <th>Nome</th>
+              <th>Produtos</th>
+              <th>Criada em</th>
+              <th></th>
+            </tr></thead>
+            <tbody id="categories-body">
+              <tr><td colspan="4" class="table-empty">Carregando…</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Modal criar / editar -->
+<div class="modal-overlay" id="modal" style="display:none">
+  <div class="modal" onclick="event.stopPropagation()" style="max-width:420px">
+    <div class="modal-header">
+      <h2 id="modal-title">Nova Categoria</h2>
+      <button class="modal-close" onclick="closeModal()">✕</button>
+    </div>
+    <div class="modal-body">
+      <input type="hidden" id="edit-id">
+      <div class="form-group">
+        <label>Nome da categoria *</label>
+        <input type="text" id="edit-name" placeholder="Ex: Camisa, Boné, Meia…">
+        <div class="form-error" id="err-modal"></div>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-secondary" onclick="closeModal()">Cancelar</button>
+      <button class="btn btn-primary" onclick="saveCategory()">Salvar</button>
+    </div>
+  </div>
+</div>
+
+<script src="/js/site-config.js"></script>
+<script src="/admin/js/admin.js"></script>
+<script src="/admin/js/sidebar.js"></script>
+<script>
+  document.getElementById('sidebar-root').innerHTML = sidebarHTML();
+
+  let categories = [];
+
+  async function loadCategories() {
+    await requireAdmin();
+    const res = await fetch('/api/categories');
+    categories = await res.json();
+
+    const tbody = document.getElementById('categories-body');
+    if (!categories.length) {
+      tbody.innerHTML = '<tr><td colspan="4" class="table-empty">Nenhuma categoria cadastrada.</td></tr>';
+      return;
+    }
+
+    tbody.innerHTML = categories.map(c => `
+      <tr>
+        <td><strong>${c.name}</strong></td>
+        <td>${c.product_count ?? 0} produto(s)</td>
+        <td>${fmtDate(c.created_at)}</td>
+        <td style="text-align:right;white-space:nowrap">
+          <button class="btn btn-secondary" style="font-size:.8rem;padding:.3rem .7rem"
+            onclick="editCategory(${c.id})">Editar</button>
+          <button class="btn btn-secondary" style="font-size:.8rem;padding:.3rem .7rem;color:var(--danger);border-color:var(--danger);margin-left:.4rem"
+            onclick="deleteCategory(${c.id}, '${c.name.replace(/'/g,"\\'")}')">Excluir</button>
+        </td>
+      </tr>
+    `).join('');
+  }
+
+  function openModal(cat = null) {
+    document.getElementById('edit-id').value    = cat?.id || '';
+    document.getElementById('edit-name').value  = cat?.name || '';
+    document.getElementById('modal-title').textContent = cat ? 'Editar Categoria' : 'Nova Categoria';
+    document.getElementById('err-modal').textContent   = '';
+    document.getElementById('modal').style.display = 'flex';
+    setTimeout(() => document.getElementById('edit-name').focus(), 50);
+  }
+
+  function editCategory(id) {
+    const cat = categories.find(c => c.id === id);
+    if (cat) openModal(cat);
+  }
+
+  function closeModal() {
+    document.getElementById('modal').style.display = 'none';
+  }
+
+  async function saveCategory() {
+    const id   = document.getElementById('edit-id').value;
+    const name = document.getElementById('edit-name').value.trim();
+    const err  = document.getElementById('err-modal');
+
+    if (!name) { err.textContent = 'Informe um nome.'; return; }
+    err.textContent = '';
+
+    try {
+      const url    = id ? `/api/categories/${id}` : '/api/categories';
+      const method = id ? 'PUT' : 'POST';
+      const res    = await fetch(url, {
+        method,
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ name }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || 'Erro ao salvar');
+      closeModal();
+      loadCategories();
+    } catch (e) {
+      err.textContent = e.message;
+    }
+  }
+
+  async function deleteCategory(id, name) {
+    if (!confirm(`Excluir a categoria "${name}"?\nOs produtos vinculados não serão excluídos, apenas desvinculados.`)) return;
+    const res = await fetch(`/api/categories/${id}`, { method: 'DELETE' });
+    if (res.ok) loadCategories();
+  }
+
+  // Salva com Enter
+  document.addEventListener('keydown', e => {
+    if (e.key === 'Enter' && document.getElementById('modal').style.display !== 'none') saveCategory();
+  });
+
+  loadCategories();
+</script>
+</body>
+</html>

@@ -13,6 +13,7 @@ app.use(express.static(path.join(__dirname, 'public')));
 
 // ── API Routes ────────────────────────────────────────────────────────────────
 app.use('/api/auth',             require('./routes/auth'));
+app.use('/api/categories',       require('./routes/categories'));
 app.use('/api/products',         require('./routes/products'));
 app.use('/api/checkout',         require('./routes/checkout'));
 app.use('/api/admin',            require('./routes/admin/index'));
@@ -27,8 +28,8 @@ app.get('/admin', (req, res) => res.redirect('/admin/index.html'));
 // ── Start ─────────────────────────────────────────────────────────────────────
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => {
-  console.log(`\n🛍️  MiniLoja rodando em http://localhost:${PORT}`);
-  console.log(`🔐  Admin: http://localhost:${PORT}/admin/login.html`);
-  console.log(`\n  Login padrão: admin@miniloja.com / admin123`);
-  console.log(`  (rode "npm run seed" antes se for a primeira vez)\n`);
+  console.log(`\n MiniLoja rodando em http://localhost:${PORT}`);
+  console.log(` Admin: http://localhost:${PORT}/admin/login.html`);
+  console.log(`\n Login padrão: admin@miniloja.com / admin123`);
+  console.log(` (rode "npm run seed" antes se for a primeira vez)\n`);
 });

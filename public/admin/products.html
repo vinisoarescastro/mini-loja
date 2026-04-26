@@ -6,111 +6,6 @@
   <title>Produtos — Admin MiniLoja</title>
   <link rel="stylesheet" href="/css/style.css">
   <link rel="stylesheet" href="/admin/admin.css">
-  <style>
-    /* ── Multi-image uploader ─────────────────────────────────────────────── */
-    .img-grid {
-      display:grid; grid-template-columns:repeat(5,1fr); gap:.5rem;
-      margin-bottom:.25rem;
-    }
-    @media (max-width:480px) { .img-grid { grid-template-columns:repeat(3,1fr); } }
-
-    .img-slot {
-      aspect-ratio:1; border-radius:8px; overflow:hidden;
-      border:2px dashed #e2e8f0; background:#f8fafc;
-      display:flex; align-items:center; justify-content:center;
-      position:relative; cursor:pointer; transition:border-color .15s;
-    }
-    .img-slot:hover { border-color:#6366f1; }
-    .img-slot.filled { border-style:solid; border-color:#e2e8f0; cursor:default; }
-    .img-slot.primary { border-color:#6366f1 !important; }
-
-    .img-slot img { width:100%; height:100%; object-fit:cover; display:block; }
-
-    .img-slot-add { display:flex; flex-direction:column; align-items:center;
-      gap:.2rem; color:#94a3b8; font-size:.7rem; text-align:center; pointer-events:none; }
-    .img-slot-add span { font-size:1.4rem; }
-
-    .img-slot-remove {
-      position:absolute; top:3px; right:3px;
-      background:rgba(0,0,0,.6); color:#fff; border:none; border-radius:50%;
-      width:20px; height:20px; font-size:.7rem; cursor:pointer;
-      display:flex; align-items:center; justify-content:center;
-      transition:background .15s;
-    }
-    .img-slot-remove:hover { background:#dc2626; }
-
-    .img-primary-badge {
-      position:absolute; bottom:3px; left:3px;
-      background:#6366f1; color:#fff; font-size:.62rem; font-weight:700;
-      padding:.1rem .35rem; border-radius:3px; pointer-events:none;
-    }
-
-    /* ── Toggle switch ────────────────────────────────────────────────────── */
-    .toggle-row { display:flex; align-items:center; justify-content:space-between;
-      padding:.6rem .9rem; background:#f8fafc; border:1px solid #e2e8f0;
-      border-radius:8px; margin-bottom:.6rem; }
-    .toggle-row label { font-size:.875rem; font-weight:500; color:#374151; }
-    .toggle-row small  { font-size:.78rem; color:#94a3b8; display:block; margin-top:.1rem; }
-    .toggle { position:relative; width:40px; height:22px; flex-shrink:0; }
-    .toggle input { opacity:0; width:0; height:0; }
-    .toggle-slider { position:absolute; inset:0; background:#cbd5e1; border-radius:999px;
-      cursor:pointer; transition:background .2s; }
-    .toggle-slider::before { content:''; position:absolute; width:16px; height:16px;
-      left:3px; top:3px; background:#fff; border-radius:50%;
-      transition:transform .2s; box-shadow:0 1px 3px rgba(0,0,0,.2); }
-    .toggle input:checked + .toggle-slider { background:#6366f1; }
-    .toggle input:checked + .toggle-slider::before { transform:translateX(18px); }
-
-    /* ── Modal sections ───────────────────────────────────────────────────── */
-    .modal-section { border-top:1px solid #f1f5f9; padding-top:.9rem; margin-top:.9rem; }
-    .modal-section-title { font-size:.8rem; font-weight:600; text-transform:uppercase;
-      letter-spacing:.06em; color:#94a3b8; margin-bottom:.75rem; }
-
-    /* ── Variation rows ───────────────────────────────────────────────────── */
-    .variation-row { display:flex; gap:.5rem; align-items:center; background:#f8fafc;
-      border:1px solid #e2e8f0; border-radius:8px; padding:.45rem .6rem; margin-bottom:.4rem; }
-    .variation-row input[type="text"]   { flex:1; min-width:0; }
-    .variation-row input[type="number"] { width:90px; flex-shrink:0; }
-
-    /* ── Stock chips ──────────────────────────────────────────────────────── */
-    .stock-chip { display:inline-flex; align-items:center; gap:.3rem; font-size:.8rem;
-      font-weight:500; padding:.2rem .55rem; border-radius:999px; white-space:nowrap; }
-    .stock-chip.ok    { background:#f0fdf4; color:#16a34a; }
-    .stock-chip.low   { background:#fef9c3; color:#a16207; }
-    .stock-chip.out   { background:#fef2f2; color:#dc2626; }
-    .stock-chip.order { background:#f0f4ff; color:#4f46e5; }
-
-    /* ── Action buttons ───────────────────────────────────────────────────── */
-    .action-btn { display:inline-flex; align-items:center; gap:.25rem; padding:.3rem .65rem;
-      border-radius:6px; font-size:.8rem; font-weight:500; border:1.5px solid transparent;
-      cursor:pointer; transition:all .15s; background:none; white-space:nowrap; }
-    .action-btn-edit   { border-color:#e2e8f0; color:#374151; }
-    .action-btn-edit:hover   { border-color:#6366f1; color:#6366f1; background:#f5f3ff; }
-    .action-btn-delete { border-color:#fee2e2; color:#dc2626; }
-    .action-btn-delete:hover { background:#fef2f2; }
-
-    /* ── Product table thumb ──────────────────────────────────────────────── */
-    .product-thumb { width:40px; height:40px; border-radius:6px; object-fit:cover;
-      border:1px solid #e2e8f0; flex-shrink:0; }
-    .product-thumb-ph { width:40px; height:40px; border-radius:6px; background:#f1f5f9;
-      border:1px solid #e2e8f0; display:flex; align-items:center; justify-content:center;
-      font-size:1.1rem; flex-shrink:0; }
-    .product-name-cell { display:flex; align-items:center; gap:.65rem; }
-    .name-wrap strong  { font-size:.9rem; }
-    .name-wrap small   { color:#94a3b8; font-size:.78rem; display:block; margin-top:.1rem; }
-
-    /* ── Notes textarea ───────────────────────────────────────────────────── */
-    textarea.form-input { resize:vertical; min-height:70px; font-family:inherit;
-      font-size:.875rem; padding:.55rem .75rem; border:1.5px solid #e2e8f0; border-radius:8px;
-      width:100%; box-sizing:border-box; color:#111827; background:#fff; transition:border-color .15s; }
-    textarea.form-input:focus { outline:none; border-color:#6366f1; box-shadow:0 0 0 3px rgba(99,102,241,.1); }
-
-    /* ── Price field ──────────────────────────────────────────────────────── */
-    .price-field { position:relative; max-width:200px; }
-    .price-prefix { position:absolute; left:.75rem; top:50%; transform:translateY(-50%);
-      font-size:.875rem; color:#64748b; pointer-events:none; font-weight:500; }
-    .price-field input { padding-left:2.5rem !important; }
-  </style>
 </head>
 <body>
 <div class="admin-wrapper">
@@ -122,14 +17,10 @@
     </div>
     <div class="admin-content">
       <div class="table-wrap">
-        <div class="table-scroll">
+        <div style="overflow-x:auto">
           <table>
             <thead><tr>
-              <th>Produto</th>
-              <th>Preço</th>
-              <th>Qtd / Estoque</th>
-              <th>Status</th>
-              <th style="text-align:right;padding-right:1.25rem">Ações</th>
+              <th>Nome</th><th>Categoria</th><th>Preço</th><th>Estoque</th><th>Variações</th><th>Status</th><th></th>
             </tr></thead>
             <tbody id="products-body"></tbody>
           </table>
@@ -139,318 +30,221 @@
   </div>
 </div>
 
-<!-- ── Modal ──────────────────────────────────────────────────────────────── -->
-<div class="modal-overlay" id="modal" style="display:none" onclick="if(event.target===this)closeModal()">
-  <div class="modal" style="max-width:580px;width:100%" onclick="event.stopPropagation()">
+<!-- Modal -->
+<div class="modal-overlay" id="modal" style="display:none">
+  <div class="modal" onclick="event.stopPropagation()">
     <div class="modal-header">
       <h2 id="modal-title">Novo Produto</h2>
       <button class="modal-close" onclick="closeModal()">✕</button>
     </div>
-    <div class="modal-body" style="max-height:80vh;overflow-y:auto">
+    <div class="modal-body">
       <input type="hidden" id="edit-id">
 
-      <!-- Informações -->
-      <div class="modal-section-title" style="margin-top:0">Informações</div>
       <div class="form-group">
         <label>Nome *</label>
-        <input type="text" id="edit-name" placeholder="Ex: Camiseta Básica">
+        <input type="text" id="edit-name" placeholder="Camiseta Básica">
       </div>
       <div class="form-group">
         <label>Descrição</label>
-        <input type="text" id="edit-desc" placeholder="Ex: Algodão 100%…">
+        <input type="text" id="edit-desc" placeholder="Algodão 100%…">
       </div>
+
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:1rem">
+        <div class="form-group">
+          <label>Preço (R$) *</label>
+          <input type="number" id="edit-price" step="0.01" placeholder="59.90">
+        </div>
+        <div class="form-group">
+          <label>Categoria</label>
+          <select id="edit-category">
+            <option value="">— Sem categoria —</option>
+          </select>
+        </div>
+      </div>
+
       <div class="form-group">
-        <label>Preço (R$) *</label>
-        <div class="price-field">
-          <span class="price-prefix">R$</span>
-          <input type="text" id="edit-price" placeholder="0,00"
-                 oninput="maskCurrencyInput(this)" inputmode="numeric">
-        </div>
+        <label>URL da Imagem</label>
+        <input type="url" id="edit-image" placeholder="https://…">
       </div>
 
-      <!-- Imagens -->
-      <div class="modal-section">
-        <div class="modal-section-title">
-          Imagens
-          <small style="text-transform:none;letter-spacing:0;font-weight:400;color:#94a3b8"> — até 5 fotos • primeira = principal</small>
-        </div>
-        <div class="img-grid" id="img-grid"></div>
-        <p style="font-size:.75rem;color:#94a3b8">PNG, JPG ou WEBP — máx. 2 MB cada. Clique num slot vazio para adicionar.</p>
-        <input type="file" id="img-file-input" accept="image/*" style="display:none" onchange="handleImageFile(event)">
+      <div id="stock-row" class="form-group">
+        <label>Estoque <small style="color:var(--muted);font-weight:400">(ignorado se houver variações)</small></label>
+        <input type="number" id="edit-stock" min="0" placeholder="0" value="0">
       </div>
 
-      <!-- Configurações -->
-      <div class="modal-section">
-        <div class="modal-section-title">Configurações</div>
-        <div class="toggle-row">
-          <div><label for="edit-active">Produto ativo</label><small>Visível na loja</small></div>
-          <label class="toggle">
-            <input type="checkbox" id="edit-active" checked>
-            <span class="toggle-slider"></span>
-          </label>
-        </div>
-        <div class="toggle-row">
-          <div><label for="edit-mto">Sob encomenda</label><small>Sem controle de estoque</small></div>
-          <label class="toggle">
-            <input type="checkbox" id="edit-mto" onchange="toggleMTO()">
-            <span class="toggle-slider"></span>
-          </label>
-        </div>
-        <div id="stock-row" class="form-group" style="margin-bottom:0">
-          <label>Estoque <small style="color:var(--muted);font-weight:400">(ignorado se houver variações)</small></label>
-          <input type="number" id="edit-stock" min="0" placeholder="0" value="0" style="max-width:140px">
-        </div>
+      <div id="active-row" class="form-group" style="display:none">
+        <label><input type="checkbox" id="edit-active" checked> Produto ativo</label>
       </div>
 
-      <!-- Variações -->
-      <div class="modal-section">
-        <div class="modal-section-title">Variações <small style="text-transform:none;letter-spacing:0;font-weight:400;color:#94a3b8">(tamanhos / cores)</small></div>
-        <p style="font-size:.8rem;color:var(--muted);margin:-.25rem 0 .6rem">Se houver variações, o estoque é controlado por variação.</p>
-        <div id="variations-list"></div>
-        <button type="button" class="btn btn-secondary" style="font-size:.82rem;padding:.35rem .75rem" onclick="addVariation()">+ Adicionar variação</button>
+      <div>
+        <label style="font-size:.875rem;font-weight:500">Variações (tamanhos / cores)</label>
+        <p style="font-size:.8rem;color:var(--muted);margin:.25rem 0 .5rem">
+          Se o produto tem variações, o estoque é controlado por variação.
+        </p>
+        <div id="variations-list" style="margin-top:.5rem"></div>
+        <button type="button" class="btn btn-secondary" style="margin-top:.4rem;font-size:.8rem" onclick="addVariation()">
+          + Adicionar variação
+        </button>
       </div>
 
-      <!-- Observações -->
-      <div class="modal-section">
-        <div class="modal-section-title">Observações</div>
-        <textarea id="edit-notes" class="form-input" placeholder="Informações internas, instruções de produção…"></textarea>
-      </div>
-
-      <div class="form-error" id="err-modal" style="margin-top:.75rem"></div>
+      <div class="form-error" id="err-modal" style="margin-top:.5rem"></div>
     </div>
     <div class="modal-footer">
       <button class="btn btn-secondary" onclick="closeModal()">Cancelar</button>
-      <button class="btn btn-primary" onclick="saveProduct()">Salvar produto</button>
+      <button class="btn btn-primary" onclick="saveProduct()">Salvar</button>
     </div>
   </div>
 </div>
 
+<script src="/js/site-config.js"></script>
 <script src="/admin/js/admin.js"></script>
 <script src="/admin/js/sidebar.js"></script>
 <script>
   document.getElementById('sidebar-root').innerHTML = sidebarHTML();
-  let products = [];
 
-  // ── Currency mask ─────────────────────────────────────────────────────────
-  function maskCurrencyInput(input) {
-    let v = input.value.replace(/\D/g,'');
-    if (!v) { input.value=''; return; }
-    const n = parseInt(v,10);
-    const reais = Math.floor(n/100), cents = n%100;
-    input.value = `${reais.toLocaleString('pt-BR')},${String(cents).padStart(2,'0')}`;
-  }
-  function parseCurrencyInput(str) {
-    if (!str) return 0;
-    return parseFloat(str.replace(/\./g,'').replace(',','.')) || 0;
-  }
-  function setPriceField(value) {
-    if (value == null || value === '') { document.getElementById('edit-price').value=''; return; }
-    const cents=Math.round(parseFloat(value)*100), reais=Math.floor(cents/100), c=cents%100;
-    document.getElementById('edit-price').value=`${reais.toLocaleString('pt-BR')},${String(c).padStart(2,'0')}`;
+  let products   = [];
+  let categories = [];
+
+  async function loadCategories() {
+    const res = await fetch('/api/categories');
+    categories = await res.json();
+    const sel = document.getElementById('edit-category');
+    // Mantém a option "Sem categoria" e adiciona as demais
+    sel.innerHTML = '<option value="">— Sem categoria —</option>' +
+      categories.map(c => `<option value="${c.id}">${c.name}</option>`).join('');
   }
 
-  // ── Multi-image state ─────────────────────────────────────────────────────
-  const MAX_IMGS = 5;
-  // Each slot: { src: string (data URL or saved URL), isNew: bool }
-  let _imgSlots = [];   // array of { src, isNew }
-  let _activeSlotIdx = -1;
-
-  function buildImgGrid() {
-    const grid = document.getElementById('img-grid');
-    grid.innerHTML = '';
-    for (let i = 0; i < MAX_IMGS; i++) {
-      const slot = _imgSlots[i];
-      const div  = document.createElement('div');
-      div.className = 'img-slot' + (slot ? ' filled' : '') + (i===0&&slot?' primary':'');
-      div.title = slot ? (i===0?'Imagem principal':'Clique no ✕ para remover') : 'Adicionar imagem';
-
-      if (slot) {
-        div.innerHTML = `
-          <img src="${slot.src}" alt="Imagem ${i+1}">
-          ${i===0?'<span class="img-primary-badge">Principal</span>':''}
-          <button class="img-slot-remove" onclick="removeImgSlot(event,${i})" title="Remover">✕</button>`;
-      } else {
-        div.onclick = () => triggerImgPicker(i);
-        div.innerHTML = `
-          <div class="img-slot-add">
-            <span>＋</span>
-            <span>${i===0?'Principal':'Foto '+(i+1)}</span>
-          </div>`;
-      }
-      grid.appendChild(div);
-    }
-  }
-
-  function triggerImgPicker(slotIdx) {
-    _activeSlotIdx = slotIdx;
-    document.getElementById('img-file-input').value='';
-    document.getElementById('img-file-input').click();
-  }
-
-  function handleImageFile(event) {
-    const file = event.target.files[0];
-    if (!file) return;
-    if (file.size > 2*1024*1024) { alert('Imagem muito grande. Máximo 2 MB.'); return; }
-    const reader = new FileReader();
-    reader.onload = e => {
-      _imgSlots[_activeSlotIdx] = { src: e.target.result, isNew: true };
-      buildImgGrid();
-    };
-    reader.readAsDataURL(file);
-  }
-
-  function removeImgSlot(evt, idx) {
-    evt.stopPropagation();
-    _imgSlots.splice(idx,1);
-    buildImgGrid();
-  }
-
-  function initImgSlots(existingUrls) {
-    _imgSlots = (existingUrls||[]).slice(0,MAX_IMGS).map(url => ({ src: url, isNew: false }));
-    buildImgGrid();
-  }
-
-  // ── Variations ────────────────────────────────────────────────────────────
-  function addVariation(id='', label='', stock=0) {
-    const div = document.createElement('div');
-    div.className = 'variation-row';
-    div.innerHTML = `
-      <input type="hidden" value="${id}">
-      <input type="text"   placeholder="Ex: M / Azul" value="${label}" style="flex:1">
-      <input type="number" placeholder="Estoque" value="${stock}" min="0" style="width:90px">
-      <button type="button" onclick="this.closest('.variation-row').remove()"
-        style="background:none;border:none;color:#dc2626;font-size:1.1rem;cursor:pointer;padding:.1rem .25rem">✕</button>`;
-    document.getElementById('variations-list').appendChild(div);
-  }
-
-  function toggleMTO() {
-    document.getElementById('stock-row').style.display =
-      document.getElementById('edit-mto').checked ? 'none' : 'block';
-  }
-
-  // ── Load products ─────────────────────────────────────────────────────────
   async function loadProducts() {
     await requireAdmin();
-    const res = await fetch('/api/admin/products');
-    products  = await res.json();
+    await loadCategories();
+    const res = await fetch('/api/products');
+    products = await res.json();
 
-    document.getElementById('products-body').innerHTML = products.map(p => {
-      const hasVar = p.variations?.length>0;
-      let chipHtml;
-      if (p.made_to_order) {
-        chipHtml=`<span class="stock-chip order">📋 ${p.total_ordered} pedido${p.total_ordered!==1?'s':''}</span>`;
-      } else {
-        const total = hasVar?p.variations.reduce((s,v)=>s+v.stock,0):(p.stock??0);
-        const cls   = total<=0?'out':total<=5?'low':'ok';
-        const icon  = total<=0?'⚠':total<=5?'⚡':'✓';
-        const varLbl= hasVar?` <span style="font-size:.75rem;color:#94a3b8">(${p.variations.map(v=>`${v.label}:${v.stock}`).join(' · ')})</span>`:'';
-        chipHtml=`<span class="stock-chip ${cls}">${icon} ${total}</span>${varLbl}`;
-      }
-      const imgSrc = p.image_url || (p.images?.[0]);
-      const thumb  = imgSrc
-        ? `<img src="${imgSrc}" class="product-thumb" alt="">`
-        : `<div class="product-thumb-ph">📦</div>`;
-      const mtoTag = p.made_to_order
-        ? `<span style="font-size:.7rem;background:#ede9fe;color:#7c3aed;padding:.1rem .4rem;border-radius:4px;font-weight:600">ENCOMENDA</span> ` : '';
-      const imgCount = p.images?.length>1 ? `<span style="font-size:.7rem;color:#94a3b8"> 📷${p.images.length}</span>` : '';
+    const tbody = document.getElementById('products-body');
+    tbody.innerHTML = products.map(p => {
+      const hasVariations = p.variations && p.variations.length > 0;
+      const estoqueTotal  = hasVariations
+        ? p.variations.reduce((s, v) => s + v.stock, 0)
+        : (p.stock ?? 0);
+      const estoqueLabel  = hasVariations
+        ? `${estoqueTotal} (${p.variations.map(v => `${v.label}: ${v.stock}`).join(', ')})`
+        : String(estoqueTotal);
+      const semEstoque    = estoqueTotal <= 0;
+
       return `
         <tr>
           <td>
-            <div class="product-name-cell">
-              ${thumb}
-              <div class="name-wrap">
-                <strong>${p.name}${imgCount}</strong>
-                <small>${mtoTag}${p.description||''}</small>
-              </div>
-            </div>
+            <strong>${p.name}</strong><br>
+            <span style="font-size:.8rem;color:#94a3b8">${p.description || ''}</span>
           </td>
-          <td style="font-weight:600">${fmt(p.price)}</td>
-          <td>${chipHtml}</td>
-          <td><span class="badge ${p.active?'badge-approved':'badge-rejected'}">${p.active?'Ativo':'Inativo'}</span></td>
+          <td>
+            ${p.category_name
+              ? `<span style="font-size:.8rem;color:var(--accent);font-weight:600">${p.category_name}</span>`
+              : '<span style="color:#94a3b8;font-size:.8rem">—</span>'}
+          </td>
+          <td>${fmt(p.price)}</td>
+          <td>
+            <span style="color:${semEstoque ? 'var(--danger)' : 'inherit'};font-weight:${semEstoque ? '600' : '400'}">
+              ${semEstoque ? '⚠ ' : ''}${estoqueLabel}
+            </span>
+          </td>
+          <td>${hasVariations ? p.variations.map(v => v.label).join(', ') : '—'}</td>
+          <td><span class="badge ${p.active ? 'badge-approved' : 'badge-rejected'}">${p.active ? 'Ativo' : 'Inativo'}</span></td>
           <td style="text-align:right;white-space:nowrap">
-            <button class="action-btn action-btn-edit" onclick="editProduct(${p.id})">✏ Editar</button>
-            <button class="action-btn action-btn-delete" onclick="deleteProduct(${p.id})" style="margin-left:.3rem">🗑 Excluir</button>
+            <button class="btn btn-secondary" style="font-size:.8rem;padding:.3rem .7rem"
+              onclick="editProduct(${p.id})">Editar</button>
+            <button class="btn btn-secondary" style="font-size:.8rem;padding:.3rem .7rem;color:var(--danger);border-color:var(--danger);margin-left:.4rem"
+              onclick="deleteProduct(${p.id})">Excluir</button>
           </td>
         </tr>`;
-    }).join('') || `<tr><td colspan="5" class="table-empty">Nenhum produto cadastrado</td></tr>`;
+    }).join('');
   }
 
-  // ── Modal open / close ────────────────────────────────────────────────────
-  function openModal(product=null) {
-    document.getElementById('edit-id').value    = product?.id    || '';
-    document.getElementById('edit-name').value  = product?.name  || '';
-    document.getElementById('edit-desc').value  = product?.description || '';
-    document.getElementById('edit-stock').value = product?.stock ?? 0;
-    document.getElementById('edit-active').checked = product ? !!product.active : true;
-    document.getElementById('edit-mto').checked    = product ? !!product.made_to_order : false;
-    document.getElementById('edit-notes').value    = product?.notes || '';
-    document.getElementById('modal-title').textContent = product ? 'Editar Produto' : 'Novo Produto';
-    document.getElementById('err-modal').textContent   = '';
+  function addVariation(id = '', label = '', stock = 0) {
+    const div = document.createElement('div');
+    div.className = 'variation-row';
+    div.style.cssText = 'display:flex;gap:.5rem;margin-bottom:.4rem;align-items:center';
+    div.innerHTML = `
+      <input type="hidden" value="${id}">
+      <input type="text"   placeholder="Ex: P, M, G, GG" value="${label}" style="flex:2">
+      <input type="number" placeholder="Estoque" value="${stock}" min="0" style="flex:1">
+      <button type="button" onclick="this.parentElement.remove()"
+        style="background:none;border:none;color:var(--danger);font-size:1.1rem;cursor:pointer;padding:0 .25rem">✕</button>`;
+    document.getElementById('variations-list').appendChild(div);
+  }
+
+  function openModal(product = null) {
+    document.getElementById('edit-id').value     = product?.id    || '';
+    document.getElementById('edit-name').value   = product?.name  || '';
+    document.getElementById('edit-desc').value   = product?.description || '';
+    document.getElementById('edit-price').value  = product?.price || '';
+    document.getElementById('edit-image').value  = product?.image_url || '';
+    document.getElementById('edit-stock').value  = product?.stock ?? 0;
+    document.getElementById('edit-category').value = product?.category_id || '';
+    document.getElementById('edit-active').checked  = product ? !!product.active : true;
+    document.getElementById('active-row').style.display  = product ? 'block' : 'none';
+    document.getElementById('modal-title').textContent   = product ? 'Editar Produto' : 'Novo Produto';
+    document.getElementById('err-modal').textContent     = '';
     document.getElementById('variations-list').innerHTML = '';
-    setPriceField(product?.price??null);
-    toggleMTO();
 
-    // Init images
-    const existingImgs = product?.images?.length ? product.images
-      : (product?.image_url ? [product.image_url] : []);
-    initImgSlots(existingImgs);
+    if (product?.variations?.length) {
+      product.variations.forEach(v => addVariation(v.id, v.label, v.stock));
+    }
 
-    if (product?.variations?.length) product.variations.forEach(v=>addVariation(v.id,v.label,v.stock));
-    document.getElementById('modal').style.display='flex';
+    document.getElementById('modal').style.display = 'flex';
   }
 
-  function editProduct(id) { const p=products.find(x=>x.id===id); if(p) openModal(p); }
+  function editProduct(id) {
+    const p = products.find(x => x.id === id);
+    if (p) openModal(p);
+  }
 
   async function deleteProduct(id) {
-    const p=products.find(x=>x.id===id);
-    if (!confirm(`Excluir "${p?.name||'produto'}"?`)) return;
-    await fetch(`/api/products/${id}`,{method:'DELETE'});
+    if (!confirm('Excluir este produto?')) return;
+    await fetch(`/api/products/${id}`, { method: 'DELETE' });
     loadProducts();
   }
 
-  function closeModal() { document.getElementById('modal').style.display='none'; }
+  function closeModal() {
+    document.getElementById('modal').style.display = 'none';
+  }
 
-  // ── Save ──────────────────────────────────────────────────────────────────
   async function saveProduct() {
-    const id            = document.getElementById('edit-id').value;
-    const name          = document.getElementById('edit-name').value.trim();
-    const description   = document.getElementById('edit-desc').value.trim();
-    const price         = parseCurrencyInput(document.getElementById('edit-price').value);
-    const stock         = parseInt(document.getElementById('edit-stock').value,10)||0;
-    const active        = document.getElementById('edit-active').checked;
-    const made_to_order = document.getElementById('edit-mto').checked;
-    const notes         = document.getElementById('edit-notes').value.trim();
+    const id          = document.getElementById('edit-id').value;
+    const name        = document.getElementById('edit-name').value.trim();
+    const description = document.getElementById('edit-desc').value.trim();
+    const price       = parseFloat(document.getElementById('edit-price').value);
+    const image_url   = document.getElementById('edit-image').value.trim();
+    const stock       = parseInt(document.getElementById('edit-stock').value, 10) || 0;
+    const active      = document.getElementById('edit-active').checked;
+    const category_id = document.getElementById('edit-category').value || null;
 
-    if (!name||!price) {
-      document.getElementById('err-modal').textContent='Nome e preço são obrigatórios.'; return;
+    if (!name || !price) {
+      document.getElementById('err-modal').textContent = 'Nome e preço são obrigatórios.';
+      return;
     }
 
-    const rows = document.querySelectorAll('#variations-list .variation-row');
-    const variations = Array.from(rows).map(r=>{
-      const inputs=r.querySelectorAll('input');
-      return { id:inputs[0].value||null, label:inputs[1].value.trim(), stock:parseInt(inputs[2].value,10)||0 };
-    }).filter(v=>v.label);
+    const rows       = document.querySelectorAll('#variations-list .variation-row');
+    const variations = Array.from(rows).map(r => {
+      const inputs = r.querySelectorAll('input');
+      return { id: inputs[0].value || null, label: inputs[1].value.trim(), stock: parseInt(inputs[2].value, 10) || 0 };
+    }).filter(v => v.label);
 
-    // Build images_base64: array of base64 strings (new) or URLs (existing)
-    const images_base64 = _imgSlots.filter(Boolean).map(s=>s.src);
-
-    const body = { name, description, price, stock, active, made_to_order, notes, variations, images_base64 };
-
-    const btn=document.querySelector('.modal-footer .btn-primary');
-    const orig=btn.textContent;
-    btn.disabled=true; btn.textContent='Salvando…';
+    const body = { name, description, price, image_url, stock, active, category_id: category_id ? Number(category_id) : null, variations };
 
     try {
-      const res=await fetch(id?`/api/products/${id}`:'/api/products',{
-        method:id?'PUT':'POST',
-        headers:{'Content-Type':'application/json'},
-        body:JSON.stringify(body),
-      });
-      if (!res.ok) { const e=await res.json().catch(()=>({})); throw new Error(e.error||'Erro ao salvar'); }
-      closeModal(); loadProducts();
-    } catch(err) {
-      document.getElementById('err-modal').textContent=err.message||'Erro ao salvar.';
-    } finally { btn.disabled=false; btn.textContent=orig; }
+      const url    = id ? `/api/products/${id}` : '/api/products';
+      const method = id ? 'PUT' : 'POST';
+      const res    = await fetch(url, { method, headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({}));
+        throw new Error(err.error || 'Erro ao salvar');
+      }
+      closeModal();
+      loadProducts();
+    } catch (err) {
+      document.getElementById('err-modal').textContent = err.message || 'Erro ao salvar.';
+    }
   }
 
   loadProducts();
