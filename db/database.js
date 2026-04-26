@@ -1,6 +1,6 @@
 /**
  * Banco SQLite usando o módulo nativo do Node.js 22+.
- * Sem dependências externas, sem compilação — funciona direto no Node 24.
+ * Sem dependências externas, sem compilação — funciona direto no Node 22+.
  */
 const { DatabaseSync } = require('node:sqlite');
 const path = require('path');
@@ -10,6 +10,23 @@ const db = new DatabaseSync(DB_PATH);
 
 db.exec('PRAGMA journal_mode = WAL');
 db.exec('PRAGMA foreign_keys = ON');
+
+// ── Polyfill: db.transaction() — compatível com a API do better-sqlite3 ──────
+// O node:sqlite não possui este método nativamente.
+// Permite usar db.transaction(() => { ... })() em qualquer rota.
+db.transaction = (fn) => {
+  return (...args) => {
+    db.exec('BEGIN');
+    try {
+      const result = fn(...args);
+      db.exec('COMMIT');
+      return result;
+    } catch (err) {
+      db.exec('ROLLBACK');
+      throw err;
+    }
+  };
+};
 
 // ── Schema ───────────────────────────────────────────────────────────────────
 db.exec(`
@@ -81,8 +98,6 @@ db.exec(`
 `);
 
 // ── Migração: adiciona coluna stock em products (bancos existentes) ───────────
-// CREATE TABLE IF NOT EXISTS não altera tabelas já criadas sem a coluna.
-// Este bloco garante compatibilidade com instâncias já em produção.
 try {
   db.exec('ALTER TABLE products ADD COLUMN stock INTEGER NOT NULL DEFAULT 0');
   console.log('[db] Migração aplicada: products.stock adicionado.');

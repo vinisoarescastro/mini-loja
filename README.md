@@ -7,7 +7,7 @@ Loja virtual completa com Node.js + Express + SQLite. **Sem Docker. Sem TypeScri
 | Camada    | Tecnologia            |
 |-----------|-----------------------|
 | Backend   | Node.js + Express     |
-| Banco     | SQLite (better-sqlite3) — arquivo local, sem instalação |
+| Banco     | SQLite (node:sqlite nativo) — Node.js 22+, sem dependências externas |
 | Auth      | JWT em cookie httpOnly |
 | Pagamento | Mercado Pago SDK v2   |
 | Frontend  | HTML + CSS + JS puro  |
