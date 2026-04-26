@@ -54,6 +54,27 @@ trackRouter.post('/', (req, res) => {
 // ── Webhook ──────────────────────────────────────────────────────────────────
 const webhookRouter = express.Router();
 
+// Status que devem devolver o estoque ao receber notificação do MP
+const RESTORE_STOCK_STATUSES = new Set(['REJECTED', 'CANCELLED', 'REFUNDED']);
+
+/**
+ * Devolve o estoque de todos os itens de um pedido.
+ * Chamado dentro de uma transação para garantir atomicidade.
+ */
+function restoreStock(orderId) {
+  const items = db.prepare('SELECT * FROM order_items WHERE order_id = ?').all(orderId);
+
+  for (const item of items) {
+    if (item.variation_id) {
+      db.prepare('UPDATE product_variations SET stock = stock + ? WHERE id = ?')
+        .run(item.quantity, item.variation_id);
+    } else {
+      db.prepare('UPDATE products SET stock = stock + ? WHERE id = ?')
+        .run(item.quantity, item.product_id);
+    }
+  }
+}
+
 webhookRouter.post('/', async (req, res) => {
   res.sendStatus(200); // responde imediatamente ao MP
 
@@ -71,23 +92,41 @@ webhookRouter.post('/', async (req, res) => {
     if (!orderCode) return;
 
     const statusMap = {
-      approved: 'APPROVED', rejected: 'REJECTED',
-      refunded: 'REFUNDED', cancelled: 'CANCELLED',
-      pending: 'PENDING', in_process: 'PENDING',
+      approved:   'APPROVED',
+      rejected:   'REJECTED',
+      refunded:   'REFUNDED',
+      cancelled:  'CANCELLED',
+      pending:    'PENDING',
+      in_process: 'PENDING',
     };
 
-    const paymentStatus = statusMap[mpPayment.status] || 'PENDING';
+    const newPaymentStatus = statusMap[mpPayment.status] || 'PENDING';
+
     const order = db.prepare('SELECT * FROM orders WHERE code = ?').get(orderCode);
     if (!order) return;
 
-    db.prepare('UPDATE payments SET mp_payment_id = ?, mp_status = ? WHERE order_id = ?')
-      .run(String(data.id), mpPayment.status, order.id);
+    // Evita processar o mesmo status duas vezes (webhooks duplicados do MP)
+    if (order.payment_status === newPaymentStatus) return;
 
-    db.prepare('UPDATE orders SET payment_status = ? WHERE id = ?')
-      .run(paymentStatus, order.id);
+    // ── Atualiza pagamento e pedido + devolve estoque se necessário ──────────
+    db.transaction(() => {
+      db.prepare('UPDATE payments SET mp_payment_id = ?, mp_status = ? WHERE order_id = ?')
+        .run(String(data.id), mpPayment.status, order.id);
 
-    if (paymentStatus === 'APPROVED')
-      db.prepare(`UPDATE orders SET order_status = 'CONFIRMED' WHERE id = ?`).run(order.id);
+      db.prepare('UPDATE orders SET payment_status = ? WHERE id = ?')
+        .run(newPaymentStatus, order.id);
+
+      if (newPaymentStatus === 'APPROVED') {
+        db.prepare(`UPDATE orders SET order_status = 'CONFIRMED' WHERE id = ?`).run(order.id);
+      }
+
+      // Devolve estoque se o pagamento foi recusado, cancelado ou estornado
+      // Só devolve se o status anterior era PENDING (nunca foi aprovado)
+      if (RESTORE_STOCK_STATUSES.has(newPaymentStatus) && order.payment_status === 'PENDING') {
+        restoreStock(order.id);
+        console.log(`[webhook] Estoque devolvido para pedido ${orderCode} (${newPaymentStatus})`);
+      }
+    })();
 
   } catch (err) {
     console.error('Webhook error:', err.message);

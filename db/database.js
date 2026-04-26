@@ -28,6 +28,7 @@ db.exec(`
     description TEXT,
     price       REAL    NOT NULL,
     image_url   TEXT,
+    stock       INTEGER NOT NULL DEFAULT 0,
     active      INTEGER NOT NULL DEFAULT 1,
     created_at  TEXT    NOT NULL DEFAULT (datetime('now'))
   );
@@ -77,6 +78,24 @@ db.exec(`
     ip         TEXT NOT NULL,
     created_at TEXT NOT NULL DEFAULT (datetime('now'))
   );
+`);
+
+// ── Migração: adiciona coluna stock em products (bancos existentes) ───────────
+// CREATE TABLE IF NOT EXISTS não altera tabelas já criadas sem a coluna.
+// Este bloco garante compatibilidade com instâncias já em produção.
+try {
+  db.exec('ALTER TABLE products ADD COLUMN stock INTEGER NOT NULL DEFAULT 0');
+  console.log('[db] Migração aplicada: products.stock adicionado.');
+} catch {
+  // Coluna já existe — ignorar
+}
+
+// ── Índices para queries frequentes ─────────────────────────────────────────
+db.exec(`
+  CREATE INDEX IF NOT EXISTS idx_customers_phone     ON customers(phone);
+  CREATE INDEX IF NOT EXISTS idx_orders_code         ON orders(code);
+  CREATE INDEX IF NOT EXISTS idx_orders_pay_status   ON orders(payment_status);
+  CREATE INDEX IF NOT EXISTS idx_search_attempts_ip  ON search_attempts(ip, created_at);
 `);
 
 module.exports = db;

@@ -35,8 +35,10 @@ router.get('/dashboard', (req, res) => {
 
 // ── Orders ───────────────────────────────────────────────────────────────────
 router.get('/orders', (req, res) => {
-  const { paymentStatus, orderStatus, search, page = 1 } = req.query;
-  const limit = 20;
+  const { paymentStatus, orderStatus, search } = req.query;
+  // node:sqlite é estrito com tipos — garantir inteiros para LIMIT e OFFSET
+  const limit  = 20;
+  const page   = Math.max(1, parseInt(req.query.page, 10) || 1);
   const offset = (page - 1) * limit;
 
   let where = '1=1';
@@ -44,8 +46,10 @@ router.get('/orders', (req, res) => {
 
   if (paymentStatus) { where += ' AND o.payment_status = ?'; params.push(paymentStatus); }
   if (orderStatus)   { where += ' AND o.order_status = ?';   params.push(orderStatus); }
-  if (search)        { where += ' AND (o.code LIKE ? OR c.name LIKE ? OR c.phone LIKE ?)';
-                       params.push(`%${search}%`, `%${search}%`, `%${search}%`); }
+  if (search)        {
+    where += ' AND (o.code LIKE ? OR c.name LIKE ? OR c.phone LIKE ?)';
+    params.push(`%${search}%`, `%${search}%`, `%${search}%`);
+  }
 
   const total = db.prepare(
     `SELECT COUNT(*) as n FROM orders o JOIN customers c ON c.id = o.customer_id WHERE ${where}`
@@ -55,8 +59,8 @@ router.get('/orders', (req, res) => {
     SELECT o.*, c.name as customer_name, c.phone as customer_phone
     FROM orders o JOIN customers c ON c.id = o.customer_id
     WHERE ${where}
-    ORDER BY o.created_at DESC LIMIT ? OFFSET ?
-  `).all(...params, limit, offset);
+    ORDER BY o.created_at DESC LIMIT ${limit} OFFSET ${offset}
+  `).all(...params);
 
   res.json({ orders, total, pages: Math.ceil(total / limit) });
 });
@@ -86,20 +90,24 @@ router.patch('/orders/:id', (req, res) => {
   if (paymentStatus) { fields.push('payment_status = ?'); params.push(paymentStatus); }
   if (!fields.length) return res.status(400).json({ error: 'Nada a atualizar' });
 
-  params.push(req.params.id);
+  params.push(parseInt(req.params.id, 10));
   db.prepare(`UPDATE orders SET ${fields.join(', ')} WHERE id = ?`).run(...params);
   res.json({ ok: true });
 });
 
 // ── Customers ────────────────────────────────────────────────────────────────
 router.get('/customers', (req, res) => {
-  const { search, page = 1 } = req.query;
-  const limit = 20;
+  const { search } = req.query;
+  const limit  = 20;
+  const page   = Math.max(1, parseInt(req.query.page, 10) || 1);
   const offset = (page - 1) * limit;
 
   let where = '1=1';
   const params = [];
-  if (search) { where += ' AND (c.name LIKE ? OR c.phone LIKE ?)'; params.push(`%${search}%`, `%${search}%`); }
+  if (search) {
+    where += ' AND (c.name LIKE ? OR c.phone LIKE ?)';
+    params.push(`%${search}%`, `%${search}%`);
+  }
 
   const total = db.prepare(`SELECT COUNT(*) as n FROM customers c WHERE ${where}`).get(...params).n;
 
@@ -112,8 +120,8 @@ router.get('/customers', (req, res) => {
     LEFT JOIN orders o ON o.customer_id = c.id
     WHERE ${where}
     GROUP BY c.id
-    ORDER BY c.created_at DESC LIMIT ? OFFSET ?
-  `).all(...params, limit, offset);
+    ORDER BY c.created_at DESC LIMIT ${limit} OFFSET ${offset}
+  `).all(...params);
 
   res.json({ customers, total, pages: Math.ceil(total / limit) });
 });
@@ -146,7 +154,7 @@ router.patch('/users/:id', requireAdmin, (req, res) => {
   if (active !== undefined) { fields.push('active = ?'); params.push(active ? 1 : 0); }
   if (!fields.length) return res.status(400).json({ error: 'Nada a atualizar' });
 
-  params.push(req.params.id);
+  params.push(parseInt(req.params.id, 10));
   db.prepare(`UPDATE users SET ${fields.join(', ')} WHERE id = ?`).run(...params);
   res.json({ ok: true });
 });
@@ -154,7 +162,7 @@ router.patch('/users/:id', requireAdmin, (req, res) => {
 router.delete('/users/:id', requireAdmin, (req, res) => {
   if (Number(req.params.id) === req.user.id)
     return res.status(400).json({ error: 'Você não pode excluir sua própria conta' });
-  db.prepare('UPDATE users SET active = 0 WHERE id = ?').run(req.params.id);
+  db.prepare('UPDATE users SET active = 0 WHERE id = ?').run(parseInt(req.params.id, 10));
   res.json({ ok: true });
 });
 

@@ -65,28 +65,43 @@
       return;
     }
 
-    grid.innerHTML = products.map(p => `
-      <div class="card product-card">
-        <img src="${p.image_url || 'https://via.placeholder.com/400x220?text=Sem+Imagem'}" alt="${p.name}">
-        <div class="product-card-body">
-          <div class="product-card-name">${p.name}</div>
-          ${p.description ? `<div class="product-card-desc">${p.description}</div>` : ''}
-          <div class="product-card-price">${fmt(p.price)}</div>
-          <div class="size-selector" id="sizes-${p.id}">
-            ${p.variations.map(v => `
-              <button class="size-btn" data-pid="${p.id}" data-vid="${v.id}" data-label="${v.label}"
-                ${v.stock <= 0 ? 'disabled title="Esgotado"' : ''}
-                onclick="selectSize(this, ${p.id})">
-                ${v.label}
+    grid.innerHTML = products.map(p => {
+      const hasVariations = p.variations && p.variations.length > 0;
+      // Produto sem variações: usa o campo stock do próprio produto
+      const semEstoque = !hasVariations && p.stock <= 0;
+
+      return `
+        <div class="card product-card">
+          <img src="${p.image_url || 'https://via.placeholder.com/400x220?text=Sem+Imagem'}" alt="${p.name}">
+          <div class="product-card-body">
+            <div class="product-card-name">${p.name}</div>
+            ${p.description ? `<div class="product-card-desc">${p.description}</div>` : ''}
+            <div class="product-card-price">${fmt(p.price)}</div>
+
+            ${hasVariations ? `
+              <div class="size-selector" id="sizes-${p.id}">
+                ${p.variations.map(v => `
+                  <button class="size-btn" data-pid="${p.id}" data-vid="${v.id}" data-label="${v.label}"
+                    ${v.stock <= 0 ? 'disabled title="Esgotado"' : ''}
+                    onclick="selectSize(this, ${p.id})">
+                    ${v.label}
+                  </button>
+                `).join('')}
+              </div>
+              <button class="btn btn-dark btn-full" id="add-btn-${p.id}" onclick="handleAdd(${p.id})" disabled>
+                Adicionar ao Carrinho
               </button>
-            `).join('')}
+            ` : `
+              <button class="btn btn-dark btn-full" id="add-btn-${p.id}"
+                onclick="handleAddSimple(${p.id})"
+                ${semEstoque ? 'disabled' : ''}>
+                ${semEstoque ? 'Esgotado' : 'Adicionar ao Carrinho'}
+              </button>
+            `}
           </div>
-          <button class="btn btn-dark btn-full" id="add-btn-${p.id}" onclick="handleAdd(${p.id})" disabled>
-            Adicionar ao Carrinho
-          </button>
         </div>
-      </div>
-    `).join('');
+      `;
+    }).join('');
   }
 
   function selectSize(btn, pid) {
@@ -95,6 +110,7 @@
     document.getElementById(`add-btn-${pid}`).disabled = false;
   }
 
+  // Produto com variação: exige seleção antes de adicionar
   function handleAdd(pid) {
     const product = products.find(p => p.id === pid);
     const selected = document.querySelector(`#sizes-${pid} .size-btn.selected`);
@@ -102,6 +118,15 @@
 
     const variation = product.variations.find(v => v.id === Number(selected.dataset.vid));
     addItem(product, variation);
+    openDrawer();
+    showToast(`${product.name} adicionado! ✓`);
+  }
+
+  // Produto sem variação: adiciona direto
+  function handleAddSimple(pid) {
+    const product = products.find(p => p.id === pid);
+    if (!product || product.stock <= 0) return;
+    addItem(product, null);
     openDrawer();
     showToast(`${product.name} adicionado! ✓`);
   }
@@ -117,7 +142,7 @@
       renderProducts();
     } catch {
       document.getElementById('products-grid').innerHTML =
-        '<p style="color:var(--danger)">Erro ao carregar produtos.</p>';
+        '<p style="color:var(--muted)">Erro ao carregar produtos.</p>';
     }
   }
 
