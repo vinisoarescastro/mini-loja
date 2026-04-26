@@ -5,6 +5,14 @@ const { createPaymentPreference } = require('../lib/mercadopago');
 
 const router = express.Router();
 
+/** Verifica se o prazo de encomenda já passou (fim do dia da data limite) */
+function deadlinePassed(deadline) {
+  if (!deadline) return false;
+  const d = new Date(deadline);
+  d.setHours(23, 59, 59, 999);
+  return d < new Date();
+}
+
 router.post('/', async (req, res) => {
   const { name, phone, email, cpf, items } = req.body;
 
@@ -14,14 +22,13 @@ router.post('/', async (req, res) => {
   try {
     const { orderId, code, orderItems, customer } = db.transaction(() => {
 
-      // Upsert customer (atualiza dados se já existir)
+      // Upsert customer
       let cust = db.prepare('SELECT * FROM customers WHERE phone = ?').get(phone);
       if (!cust) {
         const r = db.prepare('INSERT INTO customers (name, phone, email, cpf) VALUES (?, ?, ?, ?)')
           .run(name, phone, email || null, cpf || null);
         cust = db.prepare('SELECT * FROM customers WHERE id = ?').get(r.lastInsertRowid);
       } else {
-        // Atualiza email/cpf se informados
         db.prepare('UPDATE customers SET name=?, email=COALESCE(?,email), cpf=COALESCE(?,cpf) WHERE id=?')
           .run(name, email || null, cpf || null, cust.id);
       }
@@ -36,6 +43,16 @@ router.post('/', async (req, res) => {
         if (!product)
           throw { status: 400, error: `Produto ${item.productId} não encontrado` };
 
+        // ── Valida prazo de encomenda ───────────────────────────────────────
+        if (product.made_to_order && deadlinePassed(product.preorder_deadline)) {
+          throw {
+            status: 400,
+            error: `As encomendas para "${product.name}" foram encerradas em ${
+              new Date(product.preorder_deadline).toLocaleDateString('pt-BR')
+            }.`,
+          };
+        }
+
         if (item.variationId) {
           const variation = db.prepare(
             'SELECT * FROM product_variations WHERE id = ? AND product_id = ?'
@@ -44,7 +61,7 @@ router.post('/', async (req, res) => {
           if (!variation)
             throw { status: 400, error: 'Variação inválida' };
 
-          // Produtos sob encomenda: não verifica nem desconta estoque
+          // Sob encomenda: não verifica nem desconta estoque
           if (!product.made_to_order) {
             if (variation.stock < qty)
               throw {
@@ -65,7 +82,7 @@ router.post('/', async (req, res) => {
           });
 
         } else {
-          // Produtos sob encomenda: não verifica nem desconta estoque
+          // Sob encomenda: não verifica nem desconta estoque
           if (!product.made_to_order) {
             if (product.stock < qty)
               throw {
@@ -119,6 +136,7 @@ router.post('/', async (req, res) => {
       preferenceId = mp.preferenceId;
     } catch (mpErr) {
       console.error('MP error:', mpErr.message);
+      // Reverte pedido e devolve estoque (só para produtos com estoque)
       db.transaction(() => {
         for (const i of orderItems) {
           const prod = db.prepare('SELECT made_to_order FROM products WHERE id = ?').get(i.product_id);

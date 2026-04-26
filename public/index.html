@@ -24,11 +24,48 @@
     }
     .cat-pill:hover { border-color: var(--accent); color: var(--accent); }
     .cat-pill.active { background: var(--accent); border-color: var(--accent); color: #fff; }
+
+    /* ── Sob Encomenda ──────────────────────────────────────────────────── */
+    .badge-preorder {
+      display: inline-block;
+      background: #f59e0b;
+      color: #fff;
+      font-size: .68rem;
+      font-weight: 700;
+      letter-spacing: .04em;
+      padding: 2px 7px;
+      border-radius: 99px;
+      text-transform: uppercase;
+      margin-bottom: .35rem;
+    }
+    .badge-preorder-expired {
+      background: #94a3b8;
+    }
+    .preorder-deadline {
+      font-size: .73rem;
+      color: var(--muted);
+      margin-top: .2rem;
+      margin-bottom: .5rem;
+    }
+    .preorder-deadline strong {
+      color: #f59e0b;
+    }
+    .preorder-deadline.expired strong {
+      color: #94a3b8;
+    }
+    .btn-preorder {
+      background: #f59e0b;
+      border-color: #f59e0b;
+      color: #fff;
+    }
+    .btn-preorder:hover {
+      background: #d97706;
+      border-color: #d97706;
+    }
   </style>
 </head>
 <body>
 
-<!-- Header injetado pelo componente centralizado -->
 <div id="header-root"></div>
 
 <!-- Cart Drawer -->
@@ -40,10 +77,12 @@
   </div>
   <div class="drawer-body" id="cart-body"></div>
   <div class="drawer-footer">
-    <div class="cart-total" id="cart-total-row" style="display:flex;justify-content:space-between;font-weight:700;margin-bottom:.75rem">
+    <div class="cart-total" id="cart-total-row"
+         style="display:flex;justify-content:space-between;font-weight:700;margin-bottom:.75rem">
       <span>Total</span><span id="cart-total"></span>
     </div>
-    <a href="/checkout.html" id="cart-checkout-btn" class="btn btn-primary btn-full btn-lg" disabled>
+    <a href="/checkout.html" id="cart-checkout-btn"
+       class="btn btn-primary btn-full btn-lg" disabled>
       Finalizar Compra
     </a>
   </div>
@@ -51,10 +90,7 @@
 
 <main class="container page-content">
   <h1 class="section-title">Nossos Produtos</h1>
-
-  <!-- Filtro de categorias (renderizado dinamicamente) -->
   <div class="category-filter" id="category-filter"></div>
-
   <div class="products-grid" id="products-grid">
     <p style="color:var(--muted)">Carregando produtos…</p>
   </div>
@@ -66,15 +102,21 @@
 <script src="/js/header.js"></script>
 <script src="/js/cart.js"></script>
 <script>
-  // Renderiza o header com carrinho
   renderHeader({ showCart: true });
 
-  let allProducts  = [];
+  let allProducts   = [];
   let allCategories = [];
   let activeCategory = null;
 
   function fmt(val) {
     return new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(val);
+  }
+
+  function fmtDate(dateStr) {
+    if (!dateStr) return '';
+    return new Date(dateStr + 'T00:00:00').toLocaleDateString('pt-BR', {
+      day: '2-digit', month: '2-digit', year: 'numeric',
+    });
   }
 
   function showToast(msg) {
@@ -118,39 +160,99 @@
       return;
     }
 
+    const now = new Date();
+
     grid.innerHTML = list.map(p => {
       const hasVariations = p.variations && p.variations.length > 0;
-      const semEstoque    = !hasVariations && p.stock <= 0;
+      const isMTO         = !!p.made_to_order;
+      const expired       = !!p.preorder_expired;
+
+      // Situação do botão
+      // 1. Sob encomenda + prazo expirado → desabilitado
+      // 2. Sob encomenda + prazo OK (ou sem prazo) → botão amarelo "Pedir sob Encomenda"
+      // 3. Normal sem estoque → desabilitado
+      // 4. Normal com estoque → botão primário normal
+
+      const semEstoque = !isMTO && !hasVariations && p.stock <= 0;
+
+      // Badge de encomenda
+      const badgeHTML = isMTO
+        ? `<span class="badge-preorder ${expired ? 'badge-preorder-expired' : ''}">
+             ${expired ? 'Encerrado' : 'Sob Encomenda'}
+           </span>`
+        : '';
+
+      // Prazo de encomenda
+      let deadlineHTML = '';
+      if (isMTO && p.preorder_deadline) {
+        const cls = expired ? 'expired' : '';
+        deadlineHTML = `
+          <div class="preorder-deadline ${cls}">
+            ${expired ? 'Encerrado em' : 'Pedidos até'}
+            <strong>${fmtDate(p.preorder_deadline)}</strong>
+          </div>`;
+      }
+
+      // Botão de ação
+      let actionBtn = '';
+      if (isMTO && expired) {
+        actionBtn = `<button class="btn btn-primary btn-full" disabled style="margin-top:.75rem">
+          Encomendas Encerradas
+        </button>`;
+      } else if (isMTO) {
+        if (hasVariations) {
+          actionBtn = `
+            <div class="size-selector" id="sizes-${p.id}">
+              ${p.variations.map(v => `
+                <button class="size-btn" data-pid="${p.id}" data-vid="${v.id}" data-label="${v.label}"
+                  onclick="selectSize(this)">${v.label}</button>
+              `).join('')}
+            </div>
+            <button class="btn btn-primary btn-preorder btn-full" style="margin-top:.75rem"
+              onclick="addWithVariation(${p.id}, '${p.name.replace(/'/g,"\\'")}', ${p.price})">
+              Pedir sob Encomenda
+            </button>`;
+        } else {
+          actionBtn = `<button class="btn btn-primary btn-preorder btn-full" style="margin-top:.75rem"
+            onclick="addToCart({productId:${p.id},productName:'${p.name.replace(/'/g,"\\'")}',price:${p.price},quantity:1,image:'${(p.image_url||'').replace(/'/g,"\\'")}' });showToast('Adicionado ao carrinho!')">
+            Pedir sob Encomenda
+          </button>`;
+        }
+      } else if (semEstoque) {
+        actionBtn = `<button class="btn btn-primary btn-full" disabled style="margin-top:.75rem">Sem Estoque</button>`;
+      } else if (hasVariations) {
+        actionBtn = `
+          <div class="size-selector" id="sizes-${p.id}">
+            ${p.variations.map(v => `
+              <button class="size-btn" data-pid="${p.id}" data-vid="${v.id}" data-label="${v.label}"
+                ${v.stock <= 0 ? 'disabled title="Sem estoque"' : ''}
+                onclick="selectSize(this)">${v.label}</button>
+            `).join('')}
+          </div>
+          <button class="btn btn-primary btn-full" style="margin-top:.75rem"
+            onclick="addWithVariation(${p.id}, '${p.name.replace(/'/g,"\\'")}', ${p.price})">
+            Adicionar ao Carrinho
+          </button>`;
+      } else {
+        actionBtn = `<button class="btn btn-primary btn-full" style="margin-top:.75rem"
+          onclick="addToCart({productId:${p.id},productName:'${p.name.replace(/'/g,"\\'")}',price:${p.price},quantity:1,image:'${(p.image_url||'').replace(/'/g,"\\'")}' });showToast('Adicionado ao carrinho!')">
+          Adicionar ao Carrinho
+        </button>`;
+      }
 
       return `
         <div class="card product-card">
           <img src="${p.image_url || 'https://via.placeholder.com/400x220?text=Sem+Imagem'}" alt="${p.name}">
           <div class="product-card-body">
-            ${p.category_name ? `<div style="font-size:.75rem;color:var(--accent);font-weight:600;margin-bottom:.25rem;text-transform:uppercase;letter-spacing:.05em">${p.category_name}</div>` : ''}
+            ${p.category_name
+              ? `<div style="font-size:.75rem;color:var(--accent);font-weight:600;margin-bottom:.25rem;text-transform:uppercase;letter-spacing:.05em">${p.category_name}</div>`
+              : ''}
+            ${badgeHTML}
             <div class="product-card-name">${p.name}</div>
             ${p.description ? `<div class="product-card-desc">${p.description}</div>` : ''}
             <div class="product-card-price">${fmt(p.price)}</div>
-
-            ${hasVariations ? `
-              <div class="size-selector" id="sizes-${p.id}">
-                ${p.variations.map(v => `
-                  <button class="size-btn" data-pid="${p.id}" data-vid="${v.id}" data-label="${v.label}"
-                    ${v.stock <= 0 ? 'disabled title="Sem estoque"' : ''}
-                    onclick="selectSize(this)">${v.label}</button>
-                `).join('')}
-              </div>
-              <button class="btn btn-primary btn-full" style="margin-top:.75rem"
-                onclick="addWithVariation(${p.id}, '${p.name}', ${p.price})">
-                Adicionar ao Carrinho
-              </button>
-            ` : semEstoque ? `
-              <button class="btn btn-primary btn-full" disabled style="margin-top:.75rem">Sem Estoque</button>
-            ` : `
-              <button class="btn btn-primary btn-full" style="margin-top:.75rem"
-                onclick="addToCart({productId:${p.id},productName:'${p.name.replace(/'/g,"\\'")}',price:${p.price},quantity:1,image:'${(p.image_url||'').replace(/'/g,"\\'")}' });showToast('Adicionado ao carrinho!')"
-                Adicionar ao Carrinho
-              </button>
-            `}
+            ${deadlineHTML}
+            ${actionBtn}
           </div>
         </div>`;
     }).join('');
@@ -163,20 +265,20 @@
   }
 
   function addWithVariation(pid, pname, price) {
-  const sel = document.querySelector(`#sizes-${pid} .size-btn.selected`);
-  if (!sel) { showToast('Selecione um tamanho!'); return; }
-  const prod = allProducts.find(p => p.id === pid);
-  addToCart({
-    productId:      pid,
-    productName:    pname,
-    price,
-    variationId:    Number(sel.dataset.vid),
-    variationLabel: sel.dataset.label,
-    quantity:       1,
-    image:          prod?.image_url || null,
-  });
-  showToast('Adicionado ao carrinho!');
-}
+    const sel = document.querySelector(`#sizes-${pid} .size-btn.selected`);
+    if (!sel) { showToast('Selecione um tamanho!'); return; }
+    const prod = allProducts.find(p => p.id === pid);
+    addToCart({
+      productId:      pid,
+      productName:    pname,
+      price,
+      variationId:    Number(sel.dataset.vid),
+      variationLabel: sel.dataset.label,
+      quantity:       1,
+      image:          prod?.image_url || null,
+    });
+    showToast('Adicionado ao carrinho!');
+  }
 
   // ── Init ──────────────────────────────────────────────────────────────────
   async function init() {
@@ -186,10 +288,8 @@
         fetch('/api/categories'),
         fetch('/api/products'),
       ]);
-
-      if (!catRes.ok || !prodRes.ok) {
+      if (!catRes.ok || !prodRes.ok)
         throw new Error(`Erro na API: ${!catRes.ok ? catRes.status : prodRes.status}`);
-      }
 
       allCategories = await catRes.json();
       allProducts   = await prodRes.json();

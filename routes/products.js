@@ -34,6 +34,12 @@ function parseJSON(str, fallback) {
   try { return str ? JSON.parse(str) : fallback; } catch { return fallback; }
 }
 
+function parseBool(val) {
+  if (val === true  || val === 'true'  || val === '1' || val === 1) return 1;
+  if (val === false || val === 'false' || val === '0' || val === 0) return 0;
+  return 0;
+}
+
 function deleteFile(url) {
   try {
     if (!url || !url.startsWith('/uploads/')) return;
@@ -46,6 +52,15 @@ function getImages(productId) {
   return db.prepare(
     'SELECT id, url FROM product_images WHERE product_id = ? ORDER BY sort_order'
   ).all(productId);
+}
+
+/** Verifica se o prazo de encomenda já passou */
+function deadlinePassed(deadline) {
+  if (!deadline) return false;
+  // Compara fim do dia da data limite com agora
+  const d = new Date(deadline);
+  d.setHours(23, 59, 59, 999);
+  return d < new Date();
 }
 
 // ── GET /api/products — público ───────────────────────────────────────────────
@@ -67,12 +82,15 @@ router.get('/', (req, res) => {
   ).all(...params);
 
   res.json(products.map(p => {
-    const imgs = getImages(p.id).map(i => i.url);
+    const imgs    = getImages(p.id).map(i => i.url);
+    const expired = deadlinePassed(p.preorder_deadline);
     return {
       ...p,
-      image_url:      imgs[0] || p.image_url || null,
-      images:         imgs,
-      variations:     p.variations_raw
+      image_url:        imgs[0] || p.image_url || null,
+      images:           imgs,
+      made_to_order:    !!p.made_to_order,
+      preorder_expired: expired,
+      variations:       p.variations_raw
         ? p.variations_raw.split('|').map(v => {
             const [id, label, stock] = v.split(':');
             return { id: Number(id), label, stock: Number(stock) };
@@ -94,9 +112,11 @@ router.get('/:id', (req, res) => {
   if (!product) return res.status(404).json({ error: 'Produto não encontrado' });
 
   const imgs = getImages(product.id).map(i => i.url);
-  product.image_url  = imgs[0] || product.image_url || null;
-  product.images     = imgs;
-  product.variations = db.prepare(
+  product.image_url        = imgs[0] || product.image_url || null;
+  product.images           = imgs;
+  product.made_to_order    = !!product.made_to_order;
+  product.preorder_expired = deadlinePassed(product.preorder_deadline);
+  product.variations       = db.prepare(
     'SELECT * FROM product_variations WHERE product_id = ?'
   ).all(product.id);
 
@@ -105,7 +125,7 @@ router.get('/:id', (req, res) => {
 
 // ── POST /api/products — admin ────────────────────────────────────────────────
 router.post('/', requireAuth, upload.array('images', 5), (req, res) => {
-  const { name, description, price, stock, category_id } = req.body;
+  const { name, description, price, stock, category_id, made_to_order, preorder_deadline } = req.body;
   const variations = parseJSON(req.body.variations, []);
 
   if (!name?.trim() || !price)
@@ -114,17 +134,22 @@ router.post('/', requireAuth, upload.array('images', 5), (req, res) => {
     return res.status(400).json({ error: 'Pelo menos 1 imagem é obrigatória' });
 
   const r = db.prepare(
-    'INSERT INTO products (name, description, price, image_url, stock, category_id) VALUES (?, ?, ?, ?, ?, ?)'
+    `INSERT INTO products
+       (name, description, price, image_url, stock, category_id, made_to_order, preorder_deadline)
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?)`
   ).run(
     name.trim(),
     description?.trim() || null,
     parseFloat(price),
     null,
     parseInt(stock, 10) || 0,
-    category_id ? Number(category_id) : null
+    category_id ? Number(category_id) : null,
+    parseBool(made_to_order),
+    // Limpa deadline se não for encomenda ou se estiver vazio
+    parseBool(made_to_order) && preorder_deadline ? preorder_deadline : null
   );
 
-  const pid = r.lastInsertRowid;
+  const pid    = r.lastInsertRowid;
   const insImg = db.prepare(
     'INSERT INTO product_images (product_id, url, sort_order) VALUES (?, ?, ?)'
   );
@@ -134,8 +159,6 @@ router.post('/', requireAuth, upload.array('images', 5), (req, res) => {
     insImg.run(pid, url, i);
     return url;
   });
-
-  // Mantém image_url sincronizado para compatibilidade
   db.prepare('UPDATE products SET image_url = ? WHERE id = ?').run(urls[0], pid);
 
   if (variations.length) {
@@ -151,18 +174,14 @@ router.post('/', requireAuth, upload.array('images', 5), (req, res) => {
 // ── PUT /api/products/:id — admin ─────────────────────────────────────────────
 router.put('/:id', requireAuth, upload.array('images', 5), (req, res) => {
   const { id } = req.params;
-  const { name, description, price, stock, active, category_id } = req.body;
+  const { name, description, price, stock, active, category_id, made_to_order, preorder_deadline } = req.body;
   const variations = parseJSON(req.body.variations, []);
-  // URLs das imagens existentes que o usuário quer manter
   const keepUrls   = parseJSON(req.body.keepImages, []);
 
   if (!name?.trim() || !price)
     return res.status(400).json({ error: 'Nome e preço são obrigatórios' });
 
-  // Imagens atualmente no banco
   const existing = getImages(id);
-
-  // Remove do disco + banco as que o usuário descartou
   for (const img of existing) {
     if (!keepUrls.includes(img.url)) {
       deleteFile(img.url);
@@ -170,32 +189,29 @@ router.put('/:id', requireAuth, upload.array('images', 5), (req, res) => {
     }
   }
 
-  // Novas imagens enviadas
   const newUrls = (req.files || []).map(f => `/uploads/products/${f.filename}`);
 
-  // Valida mínimo de 1 imagem
   if (keepUrls.length + newUrls.length === 0) {
     (req.files || []).forEach(f => { try { fs.unlinkSync(f.path); } catch (_) {} });
     return res.status(400).json({ error: 'Pelo menos 1 imagem é obrigatória' });
   }
 
-  // Reordena mantidas (0..n)
   keepUrls.forEach((url, i) => {
     db.prepare('UPDATE product_images SET sort_order = ? WHERE product_id = ? AND url = ?')
       .run(i, id, url);
   });
-
-  // Insere novas após as mantidas
   const insImg = db.prepare(
     'INSERT INTO product_images (product_id, url, sort_order) VALUES (?, ?, ?)'
   );
   newUrls.forEach((url, i) => insImg.run(id, url, keepUrls.length + i));
 
-  const firstImg = keepUrls[0] || newUrls[0] || null;
+  const firstImg      = keepUrls[0] || newUrls[0] || null;
+  const isMadeToOrder = parseBool(made_to_order);
 
   db.prepare(
     `UPDATE products
-     SET name=?, description=?, price=?, image_url=?, stock=?, active=?, category_id=?
+     SET name=?, description=?, price=?, image_url=?, stock=?, active=?,
+         category_id=?, made_to_order=?, preorder_deadline=?
      WHERE id=?`
   ).run(
     name.trim(),
@@ -205,6 +221,8 @@ router.put('/:id', requireAuth, upload.array('images', 5), (req, res) => {
     parseInt(stock, 10) || 0,
     active === 'false' || active === false ? 0 : 1,
     category_id ? Number(category_id) : null,
+    isMadeToOrder,
+    isMadeToOrder && preorder_deadline ? preorder_deadline : null,
     id
   );
 
@@ -212,7 +230,6 @@ router.put('/:id', requireAuth, upload.array('images', 5), (req, res) => {
   if (Array.isArray(variations)) {
     const existingVars = db.prepare('SELECT id FROM product_variations WHERE product_id = ?').all(id);
     const incomingIds  = new Set(variations.filter(v => v.id).map(v => Number(v.id)));
-
     for (const { id: varId } of existingVars) {
       if (!incomingIds.has(varId)) {
         const refs = db.prepare('SELECT COUNT(*) as n FROM order_items WHERE variation_id = ?').get(varId).n;
