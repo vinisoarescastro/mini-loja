@@ -1,0 +1,113 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Status do Pagamento — MiniLoja</title>
+  <link rel="stylesheet" href="/css/style.css">
+  <style>
+    .result-box { max-width: 480px; margin: 4rem auto; text-align: center; padding: 2.5rem; }
+    .result-icon { font-size: 3.5rem; margin-bottom: 1rem; }
+    .order-code-display {
+      font-size: 1.5rem; font-weight: 700; letter-spacing: .08em;
+      background: var(--bg); padding: .6rem 1.25rem; border-radius: 8px;
+      border: 2px dashed var(--border); display: inline-block; margin: 1rem 0;
+    }
+    .status-approved { color: #16a34a; }
+    .status-rejected { color: #dc2626; }
+    .status-pending  { color: #d97706; }
+  </style>
+</head>
+<body>
+
+<header class="site-header">
+  <div class="container header-inner">
+    <a href="/" class="site-logo">🛍️ MiniLoja</a>
+  </div>
+</header>
+
+<main class="container">
+  <div class="card result-box" id="result-box">
+    <div class="result-icon" id="result-icon"></div>
+    <h1 id="result-title" style="font-size:1.5rem; font-weight:700"></h1>
+    <p id="result-desc" style="color:var(--muted); margin-top:.5rem"></p>
+
+    <div id="code-section" style="display:none">
+      <p style="margin-top:1.25rem; font-size:.9rem">Código do pedido:</p>
+      <div class="order-code-display" id="order-code">—</div>
+      <button class="btn btn-secondary" onclick="copyCode()" style="margin-top:.5rem">
+        📋 Copiar código
+      </button>
+    </div>
+
+    <div id="result-actions" style="display:flex;gap:.75rem;justify-content:center;margin-top:1.5rem;flex-wrap:wrap"></div>
+  </div>
+</main>
+
+<div id="toast"></div>
+
+<script>
+  const params = new URLSearchParams(window.location.search);
+
+  // O MP envia collection_status=approved|rejected|pending
+  // Também pode vir ?status=rejected quando redirecionado manualmente
+  const mpStatus = params.get('collection_status') || params.get('status') || 'pending';
+  const code     = params.get('external_reference') || params.get('code') || '';
+
+  const states = {
+    approved: {
+      icon:  '🎉',
+      title: 'Pagamento Aprovado!',
+      desc:  'Seu pedido foi confirmado e está sendo preparado.',
+      cls:   'status-approved',
+      actions: `
+        <a href="/track.html" class="btn btn-primary">🔍 Acompanhar Pedido</a>
+        <a href="/" class="btn btn-secondary">🛍️ Continuar Comprando</a>
+      `,
+    },
+    rejected: {
+      icon:  '❌',
+      title: 'Pagamento Recusado',
+      desc:  'Não foi possível processar seu pagamento. Tente novamente ou use outro meio de pagamento.',
+      cls:   'status-rejected',
+      actions: `
+        <a href="/checkout.html" class="btn btn-primary">🔄 Tentar Novamente</a>
+        <a href="/" class="btn btn-secondary">🛍️ Voltar à Loja</a>
+      `,
+    },
+    pending: {
+      icon:  '⏳',
+      title: 'Pagamento Pendente',
+      desc:  'Seu pagamento está sendo processado. Você receberá uma confirmação em breve.',
+      cls:   'status-pending',
+      actions: `
+        <a href="/track.html" class="btn btn-primary">🔍 Acompanhar Pedido</a>
+        <a href="/" class="btn btn-secondary">🛍️ Voltar à Loja</a>
+      `,
+    },
+  };
+
+  const state = states[mpStatus] || states.pending;
+
+  document.getElementById('result-icon').textContent  = state.icon;
+  document.getElementById('result-title').textContent = state.title;
+  document.getElementById('result-title').className   = state.cls;
+  document.getElementById('result-desc').textContent  = state.desc;
+  document.getElementById('result-actions').innerHTML = state.actions;
+
+  if (code) {
+    document.getElementById('order-code').textContent = code;
+    document.getElementById('code-section').style.display = 'block';
+  }
+
+  function copyCode() {
+    navigator.clipboard.writeText(code).then(() => {
+      const t = document.getElementById('toast');
+      t.textContent = 'Código copiado!';
+      t.classList.add('show');
+      setTimeout(() => t.classList.remove('show'), 2000);
+    });
+  }
+</script>
+</body>
+</html>

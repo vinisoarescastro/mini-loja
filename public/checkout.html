@@ -92,54 +92,56 @@
   }
 
   async function submitOrder() {
-    const name  = document.getElementById('name').value.trim();
-    const phone = document.getElementById('phone').value.replace(/\D/g, '');
-    const email = document.getElementById('email').value.trim();
-    let valid = true;
+  const name  = document.getElementById('name').value.trim();
+  const phone = document.getElementById('phone').value.replace(/\D/g, '');
+  const email = document.getElementById('email').value.trim();
+  let valid = true;
 
-    document.querySelectorAll('.form-error').forEach(el => el.textContent = '');
+  document.querySelectorAll('.form-error').forEach(el => el.textContent = '');
 
-    if (!name) { document.getElementById('err-name').textContent = 'Informe seu nome.'; valid = false; }
-    if (phone.length < 10) { document.getElementById('err-phone').textContent = 'Telefone inválido.'; valid = false; }
-    if (!valid) return;
+  if (!name)            { document.getElementById('err-name').textContent  = 'Informe seu nome.';    valid = false; }
+  if (phone.length < 10){ document.getElementById('err-phone').textContent = 'Telefone inválido.';   valid = false; }
+  if (!valid) return;
 
-    const items = loadCart();
-    if (!items.length) return;
+  const items = loadCart();
+  if (!items.length) return;
 
-    const btn = document.getElementById('submit-btn');
-    btn.disabled = true;
-    btn.textContent = 'Aguarde…';
+  const btn = document.getElementById('submit-btn');
+  btn.disabled = true;
+  btn.textContent = 'Aguarde…';
 
-    try {
-      const res = await fetch('/api/checkout', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          name, phone, email: email || undefined,
-          items: items.map(i => ({
-            productId: i.productId,
-            variationId: i.variationId,
-            quantity: i.quantity,
-          })),
-        }),
-      });
+  try {
+    const res = await fetch('/api/checkout', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        name, phone, email: email || undefined,
+        items: items.map(i => ({
+          productId:   i.productId,
+          variationId: i.variationId,
+          quantity:    i.quantity,
+        })),
+      }),
+    });
 
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.error || 'Erro no servidor');
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error || 'Erro no servidor');
 
+    // ✅ Só redireciona se tiver URL de pagamento
+    if (data.paymentUrl) {
       clearCart();
-
-      if (data.paymentUrl) {
-        window.location.href = data.paymentUrl;
-      } else {
-        window.location.href = `/success.html?code=${data.code}`;
-      }
-    } catch (err) {
-      document.getElementById('err-general').textContent = err.message;
-      btn.disabled = false;
-      btn.textContent = 'Ir para Pagamento';
+      window.location.href = data.paymentUrl;
+    } else {
+      // MP não configurado ou falhou — mostra erro, não redireciona
+      throw new Error('Não foi possível iniciar o pagamento. Tente novamente em instantes.');
     }
+
+  } catch (err) {
+    document.getElementById('err-general').textContent = err.message;
+    btn.disabled = false;
+    btn.textContent = 'Ir para Pagamento';
   }
+}
 
   renderSummary();
 </script>

@@ -34,7 +34,6 @@ router.post('/', async (req, res) => {
           throw { status: 400, error: `Produto ${item.productId} não encontrado` };
 
         if (item.variationId) {
-          // ── Produto com variação ─────────────────────────────────────────
           const variation = db.prepare(
             'SELECT * FROM product_variations WHERE id = ? AND product_id = ?'
           ).get(item.variationId, product.id);
@@ -61,7 +60,6 @@ router.post('/', async (req, res) => {
           });
 
         } else {
-          // ── Produto sem variação ─────────────────────────────────────────
           if (product.stock < qty)
             throw {
               status: 400,
@@ -84,13 +82,11 @@ router.post('/', async (req, res) => {
         total += product.price * qty;
       }
 
-      // Criar pedido
       const orderCode = generateOrderCode();
       const { lastInsertRowid: orderId } = db.prepare(
         'INSERT INTO orders (code, customer_id, total) VALUES (?, ?, ?)'
       ).run(orderCode, cust.id, total);
 
-      // Inserir itens
       const insItem = db.prepare(`
         INSERT INTO order_items
           (order_id, product_id, variation_id, product_name, variation_label, quantity, unit_price)
@@ -102,10 +98,10 @@ router.post('/', async (req, res) => {
 
       return { orderId, code: orderCode, orderItems, customer: cust };
 
-    })(); // executa a transação imediatamente
+    })();
 
     // ── Etapa 2: criar preferência no Mercado Pago (fora da transação) ───────
-    let paymentUrl = null;
+    let paymentUrl   = null;
     let preferenceId = null;
 
     try {
@@ -117,8 +113,29 @@ router.post('/', async (req, res) => {
       });
       paymentUrl   = mp.paymentUrl;
       preferenceId = mp.preferenceId;
-    } catch (err) {
-      console.error('MP error:', err.message);
+    } catch (mpErr) {
+      console.error('MP error:', mpErr.message);
+
+      // ✅ Desfaz o pedido criado para não deixar dados órfãos no banco
+      db.transaction(() => {
+        // Devolve estoque
+        for (const i of orderItems) {
+          if (i.variation_id) {
+            db.prepare('UPDATE product_variations SET stock = stock + ? WHERE id = ?')
+              .run(i.quantity, i.variation_id);
+          } else {
+            db.prepare('UPDATE products SET stock = stock + ? WHERE id = ?')
+              .run(i.quantity, i.product_id);
+          }
+        }
+        // Remove itens e pedido
+        db.prepare('DELETE FROM order_items WHERE order_id = ?').run(orderId);
+        db.prepare('DELETE FROM orders WHERE id = ?').run(orderId);
+      })();
+
+      return res.status(502).json({
+        error: 'Não foi possível conectar ao Mercado Pago. Verifique as credenciais no .env e tente novamente.',
+      });
     }
 
     db.prepare('INSERT INTO payments (order_id, mp_preference_id, payment_url) VALUES (?, ?, ?)')
@@ -127,9 +144,7 @@ router.post('/', async (req, res) => {
     res.json({ code, paymentUrl });
 
   } catch (err) {
-    // Erros de negócio (estoque, produto inválido etc.)
     if (err.status) return res.status(err.status).json({ error: err.error });
-
     console.error('Checkout error:', err);
     res.status(500).json({ error: 'Erro interno ao processar pedido' });
   }

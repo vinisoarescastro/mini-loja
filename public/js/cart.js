@@ -61,11 +61,16 @@ function fmt(val) {
 function updateCartUI() {
   const count = cartCount();
   document.querySelectorAll('.cart-count').forEach(el => el.textContent = count);
+
+  // ✅ Re-renderiza o drawer se estiver aberto
+  if (document.getElementById('cart-drawer')?.classList.contains('open')) {
+    renderDrawer();
+  }
 }
 
 function renderDrawer() {
-  const body  = document.getElementById('cart-body');
-  const total = document.getElementById('cart-total');
+  const body        = document.getElementById('cart-body');
+  const total       = document.getElementById('cart-total');
   const checkoutBtn = document.getElementById('cart-checkout-btn');
   if (!body) return;
 
@@ -99,11 +104,12 @@ function renderDrawer() {
   if (checkoutBtn) checkoutBtn.disabled = false;
 }
 
-function openDrawer()  {
+function openDrawer() {
   renderDrawer();
   document.getElementById('cart-drawer')?.classList.add('open');
   document.getElementById('cart-overlay')?.classList.add('open');
 }
+
 function closeDrawer() {
   document.getElementById('cart-drawer')?.classList.remove('open');
   document.getElementById('cart-overlay')?.classList.remove('open');
