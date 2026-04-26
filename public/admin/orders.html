@@ -6,13 +6,30 @@
   <title>Pedidos — Admin MiniLoja</title>
   <link rel="stylesheet" href="/css/style.css">
   <link rel="stylesheet" href="/admin/admin.css">
+  <style>
+    .order-item-row {
+      display: grid;
+      grid-template-columns: 1fr 130px 100px 90px auto;
+      gap: .5rem;
+      align-items: center;
+      background: #f8fafc;
+      border: 1px solid #e2e8f0;
+      border-radius: 8px;
+      padding: .5rem .65rem;
+      margin-bottom: .4rem;
+    }
+    .order-item-row select,
+    .order-item-row input { font-size: .82rem; }
+  </style>
 </head>
 <body>
 <div class="admin-wrapper">
   <div id="sidebar-root"></div>
-
   <div class="admin-main">
-    <div class="admin-topbar"><h1>Pedidos</h1></div>
+    <div class="admin-topbar">
+      <h1>Pedidos</h1>
+      <button class="btn btn-primary" onclick="openNewOrderModal()">+ Novo Pedido</button>
+    </div>
     <div class="admin-content">
       <div class="table-wrap">
         <div class="table-header">
@@ -50,8 +67,8 @@
   </div>
 </div>
 
-<!-- Modal -->
-<div class="modal-overlay" id="modal" style="display:none" onclick="e=>e.target===this&&closeModal()">
+<!-- ── Modal: Detalhes / Editar Pedido ──────────────────────────────────── -->
+<div class="modal-overlay" id="modal" style="display:none" onclick="if(event.target===this)closeModal()">
   <div class="modal" onclick="event.stopPropagation()">
     <div class="modal-header">
       <h2 id="modal-title">Pedido</h2>
@@ -65,33 +82,122 @@
   </div>
 </div>
 
+<!-- ── Modal: Novo Pedido Manual ─────────────────────────────────────────── -->
+<div class="modal-overlay" id="modal-new" style="display:none" onclick="if(event.target===this)closeNewOrderModal()">
+  <div class="modal" style="max-width:620px" onclick="event.stopPropagation()">
+    <div class="modal-header">
+      <h2>Novo Pedido Manual</h2>
+      <button class="modal-close" onclick="closeNewOrderModal()">✕</button>
+    </div>
+    <div class="modal-body" style="max-height:78vh;overflow-y:auto">
+
+      <!-- Cliente -->
+      <div style="font-size:.8rem;font-weight:600;text-transform:uppercase;letter-spacing:.06em;color:#94a3b8;margin-bottom:.6rem">Cliente</div>
+
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:.75rem">
+        <div class="form-group">
+          <label>Nome *</label>
+          <input type="text" id="no-cname" placeholder="João Silva">
+        </div>
+        <div class="form-group">
+          <label>Telefone *</label>
+          <input type="tel" id="no-cphone" placeholder="(11) 99999-9999"
+                 oninput="maskPhoneInline(this)" maxlength="15"
+                 onblur="lookupCustomer()">
+        </div>
+        <div class="form-group">
+          <label>E-mail</label>
+          <input type="email" id="no-cemail" placeholder="joao@exemplo.com">
+        </div>
+        <div class="form-group">
+          <label>CPF</label>
+          <input type="text" id="no-ccpf" placeholder="000.000.000-00"
+                 oninput="maskCPFInline(this)" maxlength="14" inputmode="numeric">
+        </div>
+      </div>
+      <div id="customer-lookup-hint" style="font-size:.8rem;color:#6366f1;margin:-.3rem 0 .6rem;display:none"></div>
+
+      <!-- Itens -->
+      <div style="border-top:1px solid #f1f5f9;padding-top:.9rem;margin-top:.4rem">
+        <div style="font-size:.8rem;font-weight:600;text-transform:uppercase;letter-spacing:.06em;color:#94a3b8;margin-bottom:.6rem">Itens do Pedido</div>
+
+        <!-- Cabeçalho colunas -->
+        <div style="display:grid;grid-template-columns:1fr 130px 100px 90px auto;gap:.5rem;font-size:.72rem;font-weight:600;color:#94a3b8;padding:0 .65rem .3rem;text-transform:uppercase;letter-spacing:.04em">
+          <span>Produto</span><span>Variação</span><span>Preço Unit.</span><span>Qtd</span><span></span>
+        </div>
+
+        <div id="order-items-list"></div>
+        <button type="button" class="btn btn-secondary" style="font-size:.82rem;padding:.35rem .75rem;margin-top:.3rem" onclick="addOrderItemRow()">
+          + Adicionar item
+        </button>
+      </div>
+
+      <!-- Total preview -->
+      <div style="border-top:1px solid #f1f5f9;padding-top:.85rem;margin-top:.85rem;display:flex;justify-content:space-between;align-items:center">
+        <strong style="font-size:.9rem">Total estimado:</strong>
+        <strong id="order-total-preview" style="font-size:1.1rem;color:#6366f1">R$ 0,00</strong>
+      </div>
+
+      <!-- Status -->
+      <div style="border-top:1px solid #f1f5f9;padding-top:.9rem;margin-top:.85rem">
+        <div style="font-size:.8rem;font-weight:600;text-transform:uppercase;letter-spacing:.06em;color:#94a3b8;margin-bottom:.6rem">Status</div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:.75rem">
+          <div class="form-group" style="margin:0">
+            <label>Status do Pedido</label>
+            <select id="no-ostatus">
+              <option value="CONFIRMED">Confirmado</option>
+              <option value="PENDING">Pendente</option>
+              <option value="PREPARING">Preparando</option>
+              <option value="SHIPPED">Enviado</option>
+              <option value="DELIVERED">Entregue</option>
+            </select>
+          </div>
+          <div class="form-group" style="margin:0">
+            <label>Pagamento</label>
+            <select id="no-pstatus">
+              <option value="APPROVED">Aprovado</option>
+              <option value="PENDING">Aguardando</option>
+              <option value="REJECTED">Recusado</option>
+            </select>
+          </div>
+        </div>
+      </div>
+
+      <div class="form-error" id="err-new-order" style="margin-top:.75rem"></div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-secondary" onclick="closeNewOrderModal()">Cancelar</button>
+      <button class="btn btn-primary" id="btn-save-new-order" onclick="saveNewOrder()">Criar Pedido</button>
+    </div>
+  </div>
+</div>
+
 <script src="/admin/js/admin.js"></script>
 <script src="/admin/js/sidebar.js"></script>
 <script>
   document.getElementById('sidebar-root').innerHTML = sidebarHTML();
 
-  let currentPage = 1;
-  let currentOrderId = null;
-  let debounceTimer;
+  let currentPage = 1, currentOrderId = null, debounceTimer;
+  let allProducts = [];  // cache de produtos para o modal de novo pedido
 
   function debounceLoad() {
     clearTimeout(debounceTimer);
     debounceTimer = setTimeout(loadOrders, 400);
   }
 
+  // ── Listar pedidos ────────────────────────────────────────────────────────
   async function loadOrders(page = 1) {
     currentPage = page;
     const params = new URLSearchParams({
       page,
-      search: document.getElementById('f-search').value,
+      search:        document.getElementById('f-search').value,
       paymentStatus: document.getElementById('f-pay').value,
-      orderStatus: document.getElementById('f-order').value,
+      orderStatus:   document.getElementById('f-order').value,
     });
-    const res = await fetch(`/api/admin/orders?${params}`);
+    const res  = await fetch(`/api/admin/orders?${params}`);
     const data = await res.json();
 
-    const tbody = document.getElementById('orders-body');
-    tbody.innerHTML = data.orders.map(o => `
+    document.getElementById('orders-body').innerHTML = data.orders.map(o => `
       <tr>
         <td><strong>${o.code}</strong></td>
         <td>${o.customer_name}</td>
@@ -104,7 +210,6 @@
       </tr>
     `).join('') || `<tr><td colspan="8" class="table-empty">Nenhum pedido encontrado</td></tr>`;
 
-    // Pagination
     const pag = document.getElementById('pagination');
     pag.innerHTML = '';
     for (let i = 1; i <= data.pages; i++) {
@@ -116,17 +221,17 @@
     }
   }
 
+  // ── Modal de detalhes ─────────────────────────────────────────────────────
   async function openOrder(id) {
     currentOrderId = id;
     const res = await fetch(`/api/admin/orders/${id}`);
-    const o = await res.json();
+    const o   = await res.json();
     document.getElementById('modal-title').textContent = `Pedido ${o.code}`;
     document.getElementById('modal-body').innerHTML = `
       <p style="margin-bottom:.75rem;font-size:.875rem;color:#64748b">${fmtDate(o.created_at)}</p>
       <p><strong>Cliente:</strong> ${o.customer_name}</p>
       <p><strong>Telefone:</strong> ${o.customer_phone}</p>
       ${o.customer_email ? `<p><strong>E-mail:</strong> ${o.customer_email}</p>` : ''}
-
       <hr style="margin:1rem 0;border:none;border-top:1px solid #e2e8f0">
       <strong>Itens:</strong>
       <table style="width:100%;margin-top:.5rem;font-size:.875rem">
@@ -139,7 +244,6 @@
         `).join('')}
         <tr><td colspan="2"><strong>Total</strong></td><td style="text-align:right"><strong>${fmt(o.total)}</strong></td></tr>
       </table>
-
       <hr style="margin:1rem 0;border:none;border-top:1px solid #e2e8f0">
       <div style="display:grid;grid-template-columns:1fr 1fr;gap:1rem">
         <div class="form-group" style="margin:0">
@@ -176,6 +280,191 @@
   }
 
   function closeModal() { document.getElementById('modal').style.display = 'none'; }
+
+  // ── Novo pedido manual ────────────────────────────────────────────────────
+  async function openNewOrderModal() {
+    // Carrega produtos se não carregados
+    if (!allProducts.length) {
+      const res = await fetch('/api/admin/products');
+      allProducts = (await res.json()).filter(p => p.active);
+    }
+
+    document.getElementById('no-cname').value  = '';
+    document.getElementById('no-cphone').value = '';
+    document.getElementById('no-cemail').value = '';
+    document.getElementById('no-ccpf').value   = '';
+    document.getElementById('no-ostatus').value = 'CONFIRMED';
+    document.getElementById('no-pstatus').value = 'APPROVED';
+    document.getElementById('err-new-order').textContent = '';
+    document.getElementById('customer-lookup-hint').style.display = 'none';
+    document.getElementById('order-items-list').innerHTML = '';
+    updateOrderTotal();
+    addOrderItemRow();   // começa com 1 linha
+
+    document.getElementById('modal-new').style.display = 'flex';
+  }
+
+  function closeNewOrderModal() { document.getElementById('modal-new').style.display = 'none'; }
+
+  function maskPhoneInline(input) {
+    let v = input.value.replace(/\D/g, '').slice(0, 11);
+    v = v.length <= 10
+      ? v.replace(/^(\d{2})(\d{4})(\d{0,4})/, '($1) $2-$3')
+      : v.replace(/^(\d{2})(\d{5})(\d{0,4})/, '($1) $2-$3');
+    input.value = v;
+  }
+
+  function maskCPFInline(input) {
+    let v = input.value.replace(/\D/g, '').slice(0, 11);
+    input.value = v.replace(/^(\d{3})(\d{3})(\d{3})(\d{0,2})/, '$1.$2.$3-$4');
+  }
+
+  // Auto-preenche dados do cliente ao digitar o telefone
+  async function lookupCustomer() {
+    const phone = document.getElementById('no-cphone').value.replace(/\D/g, '');
+    if (phone.length < 10) return;
+    const hint = document.getElementById('customer-lookup-hint');
+    const res  = await fetch(`/api/admin/customers?search=${phone}&page=1`);
+    const data = await res.json();
+    const found = data.customers.find(c => c.phone.replace(/\D/g,'') === phone);
+    if (found) {
+      document.getElementById('no-cname').value  = found.name;
+      document.getElementById('no-cemail').value = found.email || '';
+      document.getElementById('no-ccpf').value   = found.cpf
+        ? found.cpf.replace(/(\d{3})(\d{3})(\d{3})(\d{2})/, '$1.$2.$3-$4') : '';
+      hint.textContent = `✓ Cliente encontrado: ${found.name}`;
+      hint.style.display = 'block';
+    } else {
+      hint.style.display = 'none';
+    }
+  }
+
+  // Adiciona uma linha de item ao modal de novo pedido
+  function addOrderItemRow() {
+    const list = document.getElementById('order-items-list');
+    const row  = document.createElement('div');
+    row.className = 'order-item-row';
+
+    const productOptions = allProducts.map(p =>
+      `<option value="${p.id}" data-price="${p.price}"
+               data-variations='${JSON.stringify(p.variations || []).replace(/'/g,'&#39;')}'
+               data-mto="${p.made_to_order ? 1 : 0}">${p.name}</option>`
+    ).join('');
+
+    row.innerHTML = `
+      <select onchange="onProductChange(this)">${productOptions}</select>
+      <select class="var-select"><option value="">— Sem variação —</option></select>
+      <input type="text" class="price-input" placeholder="0,00"
+             oninput="maskPriceInline(this);updateOrderTotal()" style="text-align:right">
+      <input type="number" class="qty-input" value="1" min="1"
+             oninput="updateOrderTotal()" style="text-align:center">
+      <button type="button" onclick="this.closest('.order-item-row').remove();updateOrderTotal()"
+        style="background:none;border:none;color:#dc2626;font-size:1.1rem;cursor:pointer;padding:.1rem .2rem">✕</button>
+    `;
+    list.appendChild(row);
+
+    // Inicializa produto selecionado
+    const sel = row.querySelector('select');
+    onProductChange(sel);
+  }
+
+  function onProductChange(sel) {
+    const opt = sel.options[sel.selectedIndex];
+    const price = parseFloat(opt.dataset.price) || 0;
+    const variations = JSON.parse(opt.dataset.variations || '[]');
+    const row = sel.closest('.order-item-row');
+
+    // Atualiza variações
+    const varSel = row.querySelector('.var-select');
+    varSel.innerHTML = '<option value="">— Sem variação —</option>' +
+      variations.map(v => `<option value="${v.id}">${v.label} (estoque: ${v.stock})</option>`).join('');
+
+    // Atualiza preço
+    const priceInput = row.querySelector('.price-input');
+    priceInput.value = price.toFixed(2).replace('.', ',');
+    updateOrderTotal();
+  }
+
+  function maskPriceInline(input) {
+    let v = input.value.replace(/[^\d,]/g, '');
+    const parts = v.split(',');
+    if (parts.length > 2) v = parts[0] + ',' + parts.slice(1).join('');
+    input.value = v;
+  }
+
+  function parsePriceInput(str) {
+    return parseFloat((str || '0').replace(/\./g, '').replace(',', '.')) || 0;
+  }
+
+  function updateOrderTotal() {
+    let total = 0;
+    document.querySelectorAll('#order-items-list .order-item-row').forEach(row => {
+      const price = parsePriceInput(row.querySelector('.price-input').value);
+      const qty   = parseInt(row.querySelector('.qty-input').value) || 1;
+      total += price * qty;
+    });
+    document.getElementById('order-total-preview').textContent =
+      new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(total);
+  }
+
+  async function saveNewOrder() {
+    document.getElementById('err-new-order').textContent = '';
+    const name   = document.getElementById('no-cname').value.trim();
+    const phone  = document.getElementById('no-cphone').value.replace(/\D/g, '');
+    const email  = document.getElementById('no-cemail').value.trim();
+    const cpf    = document.getElementById('no-ccpf').value.replace(/\D/g, '');
+    const oSt    = document.getElementById('no-ostatus').value;
+    const pSt    = document.getElementById('no-pstatus').value;
+
+    if (!name || phone.length < 10) {
+      document.getElementById('err-new-order').textContent = 'Nome e telefone do cliente são obrigatórios.';
+      return;
+    }
+
+    const rows = document.querySelectorAll('#order-items-list .order-item-row');
+    if (!rows.length) {
+      document.getElementById('err-new-order').textContent = 'Adicione pelo menos um item.';
+      return;
+    }
+
+    const items = Array.from(rows).map(row => {
+      const productSel = row.querySelector('select');
+      const varSel     = row.querySelector('.var-select');
+      const price      = parsePriceInput(row.querySelector('.price-input').value);
+      const qty        = parseInt(row.querySelector('.qty-input').value) || 1;
+      return {
+        product_id:   parseInt(productSel.value),
+        variation_id: varSel.value ? parseInt(varSel.value) : null,
+        unit_price:   price,
+        quantity:     qty,
+      };
+    });
+
+    const btn = document.getElementById('btn-save-new-order');
+    btn.disabled = true; btn.textContent = 'Criando…';
+
+    const res = await fetch('/api/admin/orders', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        customer: { name, phone, email: email || null, cpf: cpf || null },
+        items,
+        order_status:   oSt,
+        payment_status: pSt,
+      }),
+    });
+    const data = await res.json();
+    btn.disabled = false; btn.textContent = 'Criar Pedido';
+
+    if (!res.ok) {
+      document.getElementById('err-new-order').textContent = data.error || 'Erro ao criar pedido.';
+      return;
+    }
+
+    closeNewOrderModal();
+    loadOrders(1);
+    alert(`✅ Pedido criado com sucesso!\nCódigo: ${data.code}`);
+  }
 
   requireAdmin().then(loadOrders);
 </script>

@@ -6,25 +6,67 @@
   <title>Dashboard — Admin MiniLoja</title>
   <link rel="stylesheet" href="/css/style.css">
   <link rel="stylesheet" href="/admin/admin.css">
+  <style>
+    .stats-grid-2 {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+      gap: 1rem;
+      margin-bottom: 1.5rem;
+    }
+    .stat-card { background: #fff; border-radius: 10px; padding: 1.25rem; border: 1px solid #e2e8f0; }
+    .stat-card.accent  { border-left: 4px solid #6366f1; }
+    .stat-card.green   { border-left: 4px solid #22c55e; }
+    .stat-card.orange  { border-left: 4px solid #f59e0b; }
+    .stat-card.blue    { border-left: 4px solid #3b82f6; }
+    .stat-card.red     { border-left: 4px solid #ef4444; }
+    .stat-label { font-size: .78rem; color: #64748b; font-weight: 600; text-transform: uppercase; letter-spacing: .05em; }
+    .stat-value { font-size: 1.65rem; font-weight: 800; margin-top: .3rem; }
+    .stat-sub   { font-size: .78rem; color: #94a3b8; margin-top: .15rem; }
+
+    /* Top products table */
+    .rank-num {
+      display: inline-flex; align-items: center; justify-content: center;
+      width: 22px; height: 22px; border-radius: 50%;
+      font-size: .75rem; font-weight: 700;
+      background: #f1f5f9; color: #64748b;
+    }
+    .rank-num.top { background: #fef9c3; color: #854d0e; }
+  </style>
 </head>
 <body>
 <div class="admin-wrapper">
   <div id="sidebar-root"></div>
-
   <div class="admin-main">
-    <div class="admin-topbar">
-      <h1>Dashboard</h1>
-    </div>
+    <div class="admin-topbar"><h1>Dashboard</h1></div>
     <div class="admin-content">
-      <!-- Stats -->
-      <div class="stats-grid" id="stats-grid">
-        <div class="stat-card"><div class="stat-label">Pedidos</div><div class="stat-value" id="s-orders">—</div></div>
-        <div class="stat-card"><div class="stat-label">Receita Bruta</div><div class="stat-value" id="s-gross">—</div></div>
-        <div class="stat-card"><div class="stat-label">Receita Aprovada</div><div class="stat-value" id="s-approved">—</div></div>
+
+      <!-- Stats row -->
+      <div class="stats-grid-2">
+        <div class="stat-card accent">
+          <div class="stat-label">Total de Pedidos</div>
+          <div class="stat-value" id="s-total-orders">—</div>
+          <div class="stat-sub" id="s-pending-orders">— pendentes</div>
+        </div>
+        <div class="stat-card green">
+          <div class="stat-label">Vendas Aprovadas</div>
+          <div class="stat-value" id="s-approved">—</div>
+          <div class="stat-sub">Pagamentos confirmados</div>
+        </div>
+        <div class="stat-card orange">
+          <div class="stat-label">Vendas Pendentes</div>
+          <div class="stat-value" id="s-pending">—</div>
+          <div class="stat-sub">Aguardando pagamento</div>
+        </div>
+        <div class="stat-card blue">
+          <div class="stat-label">Receita Bruta</div>
+          <div class="stat-value" id="s-gross">—</div>
+          <div class="stat-sub">Todos os pedidos</div>
+        </div>
       </div>
 
       <div style="display:grid;grid-template-columns:1fr 1fr;gap:1rem;align-items:start">
-        <!-- Recent orders -->
+
+        <!-- Pedidos recentes -->
         <div class="table-wrap">
           <div class="table-header"><strong>Pedidos Recentes</strong></div>
           <table>
@@ -35,11 +77,17 @@
           </table>
         </div>
 
-        <!-- Product breakdown -->
-        <div class="table-wrap" style="padding:1.25rem">
-          <strong>Vendas por Produto</strong>
-          <div class="bar-chart" id="bar-chart"></div>
+        <!-- Ranking de produtos -->
+        <div class="table-wrap">
+          <div class="table-header"><strong>🏆 Produtos Mais Vendidos</strong></div>
+          <table>
+            <thead><tr>
+              <th>#</th><th>Produto</th><th style="text-align:right">Qtd</th><th style="text-align:right">Receita</th>
+            </tr></thead>
+            <tbody id="top-products-body"></tbody>
+          </table>
         </div>
+
       </div>
     </div>
   </div>
@@ -56,28 +104,33 @@
     if (!res.ok) return;
     const d = await res.json();
 
-    document.getElementById('s-orders').textContent   = d.totalOrders;
-    document.getElementById('s-gross').textContent    = fmt(d.totalGross);
-    document.getElementById('s-approved').textContent = fmt(d.totalApproved);
+    document.getElementById('s-total-orders').textContent   = d.totalOrders;
+    document.getElementById('s-pending-orders').textContent = `${d.pendingOrders} pendente${d.pendingOrders !== 1 ? 's' : ''}`;
+    document.getElementById('s-approved').textContent       = fmt(d.totalApproved);
+    document.getElementById('s-pending').textContent        = fmt(d.totalPending);
+    document.getElementById('s-gross').textContent          = fmt(d.totalGross);
 
-    const tbody = document.getElementById('recent-orders-body');
-    tbody.innerHTML = d.recentOrders.map(o => `
-      <tr>
-        <td><a href="/admin/orders.html" style="color:var(--accent)">${o.code}</a></td>
-        <td>${o.customer_name}</td>
-        <td>${fmt(o.total)}</td>
-        <td><span class="${badgeClass(o.payment_status)}">${PAY_LABEL[o.payment_status]||o.payment_status}</span></td>
-      </tr>
-    `).join('') || `<tr><td colspan="4" class="table-empty">Nenhum pedido ainda</td></tr>`;
+    // Pedidos recentes
+    document.getElementById('recent-orders-body').innerHTML =
+      d.recentOrders.map(o => `
+        <tr>
+          <td><strong>${o.code}</strong></td>
+          <td>${o.customer_name}</td>
+          <td>${fmt(o.total)}</td>
+          <td><span class="${badgeClass(o.payment_status)}">${PAY_LABEL[o.payment_status] || o.payment_status}</span></td>
+        </tr>
+      `).join('') || `<tr><td colspan="4" class="table-empty">Nenhum pedido</td></tr>`;
 
-    const maxRevenue = Math.max(...d.productBreakdown.map(p => p.revenue), 1);
-    document.getElementById('bar-chart').innerHTML = d.productBreakdown.map(p => `
-      <div class="bar-row">
-        <span class="bar-label" title="${p.product_name}">${p.product_name}</span>
-        <div class="bar-track"><div class="bar-fill" style="width:${(p.revenue/maxRevenue*100).toFixed(1)}%"></div></div>
-        <span class="bar-value">${fmt(p.revenue)}</span>
-      </div>
-    `).join('') || '<p style="color:#94a3b8;font-size:.875rem;margin-top:.5rem">Sem dados ainda</p>';
+    // Top produtos
+    document.getElementById('top-products-body').innerHTML =
+      (d.topProducts || []).map((p, i) => `
+        <tr>
+          <td><span class="rank-num ${i < 3 ? 'top' : ''}">${i + 1}</span></td>
+          <td><strong style="font-size:.875rem">${p.name}</strong></td>
+          <td style="text-align:right;font-weight:700">${p.qty}</td>
+          <td style="text-align:right;color:#16a34a;font-weight:600">${fmt(p.revenue)}</td>
+        </tr>
+      `).join('') || `<tr><td colspan="4" class="table-empty">Nenhuma venda registrada</td></tr>`;
   }
 
   load();

@@ -11,49 +11,54 @@
 <header class="site-header">
   <div class="container header-inner">
     <a href="/" class="site-logo">🛍️ MiniLoja</a>
-    <nav class="header-nav">
-      <a href="/">← Voltar</a>
-    </nav>
+    <nav class="header-nav"><a href="/">← Voltar</a></nav>
   </div>
 </header>
 
 <main class="container page-content">
   <h1 class="section-title">Finalizar Pedido</h1>
 
-  <div id="empty-cart" style="display:none; text-align:center; padding: 4rem 0">
-    <p style="color:var(--muted); font-size:1.1rem">Seu carrinho está vazio.</p>
+  <div id="empty-cart" style="display:none;text-align:center;padding:4rem 0">
+    <p style="color:var(--muted);font-size:1.1rem">Seu carrinho está vazio.</p>
     <a href="/" class="btn btn-primary" style="margin-top:1rem">Ver Produtos</a>
   </div>
 
   <div class="checkout-grid" id="checkout-content">
-    <!-- Dados pessoais -->
     <div class="card" style="padding:1.5rem">
       <h2 style="font-size:1.1rem;font-weight:700;margin-bottom:1.25rem">Seus Dados</h2>
 
       <div class="form-group">
         <label for="name">Nome completo *</label>
-        <input type="text" id="name" placeholder="João Silva">
+        <input type="text" id="name" placeholder="João Silva" autocomplete="name">
         <div class="form-error" id="err-name"></div>
       </div>
 
       <div class="form-group">
         <label for="phone">WhatsApp / Telefone *</label>
-        <input type="tel" id="phone" placeholder="(11) 99999-9999">
+        <input type="tel" id="phone" placeholder="(11) 99999-9999"
+               oninput="maskPhone(this)" maxlength="15" autocomplete="tel">
         <div class="form-error" id="err-phone"></div>
       </div>
 
       <div class="form-group">
-        <label for="email">E-mail (opcional)</label>
-        <input type="email" id="email" placeholder="joao@exemplo.com">
+        <label for="cpf">CPF *</label>
+        <input type="text" id="cpf" placeholder="000.000.000-00"
+               oninput="maskCPF(this)" maxlength="14" autocomplete="off" inputmode="numeric">
+        <div class="form-error" id="err-cpf"></div>
+      </div>
+
+      <div class="form-group">
+        <label for="email">E-mail *</label>
+        <input type="email" id="email" placeholder="joao@exemplo.com" autocomplete="email">
+        <div class="form-error" id="err-email"></div>
       </div>
 
       <button class="btn btn-primary btn-full btn-lg" id="submit-btn" onclick="submitOrder()">
         Ir para Pagamento
       </button>
-      <div class="form-error" id="err-general" style="margin-top:.5rem; text-align:center"></div>
+      <div class="form-error" id="err-general" style="margin-top:.5rem;text-align:center"></div>
     </div>
 
-    <!-- Resumo -->
     <div>
       <div class="card" style="padding:1.25rem">
         <h2 style="font-size:1rem;font-weight:700;margin-bottom:1rem">Resumo do Pedido</h2>
@@ -73,6 +78,44 @@
     return new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(val);
   }
 
+  // ── Máscaras ─────────────────────────────────────────────────────────────
+  function maskPhone(input) {
+    let v = input.value.replace(/\D/g, '').slice(0, 11);
+    if (v.length <= 10) {
+      v = v.replace(/^(\d{2})(\d{4})(\d{0,4})/, '($1) $2-$3');
+    } else {
+      v = v.replace(/^(\d{2})(\d{5})(\d{0,4})/, '($1) $2-$3');
+    }
+    input.value = v;
+  }
+
+  function maskCPF(input) {
+    let v = input.value.replace(/\D/g, '').slice(0, 11);
+    v = v.replace(/^(\d{3})(\d{3})(\d{3})(\d{0,2})/, '$1.$2.$3-$4');
+    input.value = v;
+  }
+
+  // ── Validações ───────────────────────────────────────────────────────────
+  function validateCPF(cpf) {
+    const c = cpf.replace(/\D/g, '');
+    if (c.length !== 11 || /^(\d)\1{10}$/.test(c)) return false;
+    let sum = 0;
+    for (let i = 0; i < 9; i++) sum += parseInt(c[i]) * (10 - i);
+    let r = (sum * 10) % 11;
+    if (r === 10 || r === 11) r = 0;
+    if (r !== parseInt(c[9])) return false;
+    sum = 0;
+    for (let i = 0; i < 10; i++) sum += parseInt(c[i]) * (11 - i);
+    r = (sum * 10) % 11;
+    if (r === 10 || r === 11) r = 0;
+    return r === parseInt(c[10]);
+  }
+
+  function validateEmail(email) {
+    return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
+  }
+
+  // ── Renderizar resumo ────────────────────────────────────────────────────
   function renderSummary() {
     const items = loadCart();
     if (!items.length) {
@@ -80,68 +123,83 @@
       document.getElementById('empty-cart').style.display = 'block';
       return;
     }
-
     document.getElementById('summary-items').innerHTML = items.map(i => `
       <div class="order-summary-item">
         <span>${i.productName}${i.variationLabel ? ` (${i.variationLabel})` : ''} × ${i.quantity}</span>
         <span>${fmt(i.price * i.quantity)}</span>
       </div>
     `).join('');
-
     document.getElementById('summary-total').textContent = fmt(cartTotal());
   }
 
+  // ── Submeter pedido ──────────────────────────────────────────────────────
   async function submitOrder() {
-  const name  = document.getElementById('name').value.trim();
-  const phone = document.getElementById('phone').value.replace(/\D/g, '');
-  const email = document.getElementById('email').value.trim();
-  let valid = true;
+    const name  = document.getElementById('name').value.trim();
+    const phone = document.getElementById('phone').value.replace(/\D/g, '');
+    const cpf   = document.getElementById('cpf').value.replace(/\D/g, '');
+    const email = document.getElementById('email').value.trim();
 
-  document.querySelectorAll('.form-error').forEach(el => el.textContent = '');
+    let valid = true;
+    document.querySelectorAll('.form-error').forEach(el => el.textContent = '');
 
-  if (!name)            { document.getElementById('err-name').textContent  = 'Informe seu nome.';    valid = false; }
-  if (phone.length < 10){ document.getElementById('err-phone').textContent = 'Telefone inválido.';   valid = false; }
-  if (!valid) return;
-
-  const items = loadCart();
-  if (!items.length) return;
-
-  const btn = document.getElementById('submit-btn');
-  btn.disabled = true;
-  btn.textContent = 'Aguarde…';
-
-  try {
-    const res = await fetch('/api/checkout', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        name, phone, email: email || undefined,
-        items: items.map(i => ({
-          productId:   i.productId,
-          variationId: i.variationId,
-          quantity:    i.quantity,
-        })),
-      }),
-    });
-
-    const data = await res.json();
-    if (!res.ok) throw new Error(data.error || 'Erro no servidor');
-
-    // ✅ Só redireciona se tiver URL de pagamento
-    if (data.paymentUrl) {
-      clearCart();
-      window.location.href = data.paymentUrl;
-    } else {
-      // MP não configurado ou falhou — mostra erro, não redireciona
-      throw new Error('Não foi possível iniciar o pagamento. Tente novamente em instantes.');
+    if (!name) {
+      document.getElementById('err-name').textContent = 'Informe seu nome completo.';
+      valid = false;
     }
 
-  } catch (err) {
-    document.getElementById('err-general').textContent = err.message;
-    btn.disabled = false;
-    btn.textContent = 'Ir para Pagamento';
+    if (phone.length < 10) {
+      document.getElementById('err-phone').textContent = 'Informe um telefone válido com DDD.';
+      valid = false;
+    }
+
+    if (!validateCPF(cpf)) {
+      document.getElementById('err-cpf').textContent = 'CPF inválido. Verifique os dígitos.';
+      valid = false;
+    }
+
+    if (!email || !validateEmail(email)) {
+      document.getElementById('err-email').textContent = 'Informe um e-mail válido.';
+      valid = false;
+    }
+
+    if (!valid) return;
+
+    const items = loadCart();
+    if (!items.length) return;
+
+    const btn = document.getElementById('submit-btn');
+    btn.disabled = true;
+    btn.textContent = 'Aguarde…';
+
+    try {
+      const res = await fetch('/api/checkout', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          name, phone, email, cpf,
+          items: items.map(i => ({
+            productId:   i.productId,
+            variationId: i.variationId,
+            quantity:    i.quantity,
+          })),
+        }),
+      });
+
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || 'Erro no servidor');
+
+      if (data.paymentUrl) {
+        clearCart();
+        window.location.href = data.paymentUrl;
+      } else {
+        throw new Error('Não foi possível iniciar o pagamento. Tente novamente em instantes.');
+      }
+    } catch (err) {
+      document.getElementById('err-general').textContent = err.message;
+      btn.disabled = false;
+      btn.textContent = 'Ir para Pagamento';
+    }
   }
-}
 
   renderSummary();
 </script>

@@ -6,21 +6,24 @@ const { createPaymentPreference } = require('../lib/mercadopago');
 const router = express.Router();
 
 router.post('/', async (req, res) => {
-  const { name, phone, email, items } = req.body;
+  const { name, phone, email, cpf, items } = req.body;
 
   if (!name || !phone || !Array.isArray(items) || items.length === 0)
     return res.status(400).json({ error: 'Dados incompletos' });
 
   try {
-    // ── Etapa 1: validar, reservar estoque e criar pedido (atômico) ──────────
     const { orderId, code, orderItems, customer } = db.transaction(() => {
 
-      // Upsert customer
+      // Upsert customer (atualiza dados se já existir)
       let cust = db.prepare('SELECT * FROM customers WHERE phone = ?').get(phone);
       if (!cust) {
-        const r = db.prepare('INSERT INTO customers (name, phone, email) VALUES (?, ?, ?)')
-          .run(name, phone, email || null);
+        const r = db.prepare('INSERT INTO customers (name, phone, email, cpf) VALUES (?, ?, ?, ?)')
+          .run(name, phone, email || null, cpf || null);
         cust = db.prepare('SELECT * FROM customers WHERE id = ?').get(r.lastInsertRowid);
+      } else {
+        // Atualiza email/cpf se informados
+        db.prepare('UPDATE customers SET name=?, email=COALESCE(?,email), cpf=COALESCE(?,cpf) WHERE id=?')
+          .run(name, email || null, cpf || null, cust.id);
       }
 
       let total = 0;
@@ -41,14 +44,16 @@ router.post('/', async (req, res) => {
           if (!variation)
             throw { status: 400, error: 'Variação inválida' };
 
-          if (variation.stock < qty)
-            throw {
-              status: 400,
-              error: `Estoque insuficiente para "${product.name} — ${variation.label}". Disponível: ${variation.stock}`,
-            };
-
-          db.prepare('UPDATE product_variations SET stock = stock - ? WHERE id = ?')
-            .run(qty, variation.id);
+          // Produtos sob encomenda: não verifica nem desconta estoque
+          if (!product.made_to_order) {
+            if (variation.stock < qty)
+              throw {
+                status: 400,
+                error: `Estoque insuficiente para "${product.name} — ${variation.label}". Disponível: ${variation.stock}`,
+              };
+            db.prepare('UPDATE product_variations SET stock = stock - ? WHERE id = ?')
+              .run(qty, variation.id);
+          }
 
           orderItems.push({
             product_id:      product.id,
@@ -60,14 +65,16 @@ router.post('/', async (req, res) => {
           });
 
         } else {
-          if (product.stock < qty)
-            throw {
-              status: 400,
-              error: `Estoque insuficiente para "${product.name}". Disponível: ${product.stock}`,
-            };
-
-          db.prepare('UPDATE products SET stock = stock - ? WHERE id = ?')
-            .run(qty, product.id);
+          // Produtos sob encomenda: não verifica nem desconta estoque
+          if (!product.made_to_order) {
+            if (product.stock < qty)
+              throw {
+                status: 400,
+                error: `Estoque insuficiente para "${product.name}". Disponível: ${product.stock}`,
+              };
+            db.prepare('UPDATE products SET stock = stock - ? WHERE id = ?')
+              .run(qty, product.id);
+          }
 
           orderItems.push({
             product_id:      product.id,
@@ -97,13 +104,10 @@ router.post('/', async (req, res) => {
       );
 
       return { orderId, code: orderCode, orderItems, customer: cust };
-
     })();
 
-    // ── Etapa 2: criar preferência no Mercado Pago (fora da transação) ───────
-    let paymentUrl   = null;
-    let preferenceId = null;
-
+    // Mercado Pago
+    let paymentUrl = null, preferenceId = null;
     try {
       const mp = await createPaymentPreference({
         order:   { id: orderId, code },
@@ -115,24 +119,20 @@ router.post('/', async (req, res) => {
       preferenceId = mp.preferenceId;
     } catch (mpErr) {
       console.error('MP error:', mpErr.message);
-
-      // ✅ Desfaz o pedido criado para não deixar dados órfãos no banco
       db.transaction(() => {
-        // Devolve estoque
         for (const i of orderItems) {
-          if (i.variation_id) {
-            db.prepare('UPDATE product_variations SET stock = stock + ? WHERE id = ?')
-              .run(i.quantity, i.variation_id);
-          } else {
-            db.prepare('UPDATE products SET stock = stock + ? WHERE id = ?')
-              .run(i.quantity, i.product_id);
+          const prod = db.prepare('SELECT made_to_order FROM products WHERE id = ?').get(i.product_id);
+          if (!prod?.made_to_order) {
+            if (i.variation_id) {
+              db.prepare('UPDATE product_variations SET stock = stock + ? WHERE id = ?').run(i.quantity, i.variation_id);
+            } else {
+              db.prepare('UPDATE products SET stock = stock + ? WHERE id = ?').run(i.quantity, i.product_id);
+            }
           }
         }
-        // Remove itens e pedido
         db.prepare('DELETE FROM order_items WHERE order_id = ?').run(orderId);
         db.prepare('DELETE FROM orders WHERE id = ?').run(orderId);
       })();
-
       return res.status(502).json({
         error: 'Não foi possível conectar ao Mercado Pago. Verifique as credenciais no .env e tente novamente.',
       });

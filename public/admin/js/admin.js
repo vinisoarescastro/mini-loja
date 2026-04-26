@@ -1,20 +1,20 @@
 // ── Shared admin utilities ───────────────────────────────────────────────────
 
 function fmt(val) {
-  return new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(val);
+  return new Intl.NumberFormat('pt-BR', { style:'currency', currency:'BRL' }).format(val);
 }
 
 function fmtDate(dt) {
   if (!dt) return '—';
   return new Date(dt).toLocaleDateString('pt-BR', {
-    day: '2-digit', month: '2-digit', year: 'numeric',
-    hour: '2-digit', minute: '2-digit',
+    day:'2-digit', month:'2-digit', year:'numeric',
+    hour:'2-digit', minute:'2-digit',
   });
 }
 
 const STATUS_LABEL = {
   PENDING:'Pendente', CONFIRMED:'Confirmado', PREPARING:'Preparando',
-  SHIPPED:'Enviado', DELIVERED:'Entregue', CANCELLED:'Cancelado',
+  SHIPPED:'Enviado',  DELIVERED:'Entregue',   CANCELLED:'Cancelado',
 };
 const PAY_LABEL = {
   PENDING:'Aguardando', APPROVED:'Aprovado', REJECTED:'Recusado',
@@ -22,13 +22,15 @@ const PAY_LABEL = {
 };
 
 function badgeClass(status) {
-  const map = { APPROVED:'approved', REJECTED:'rejected', CANCELLED:'cancelled',
+  const map = {
+    APPROVED:'approved', REJECTED:'rejected', CANCELLED:'cancelled',
     CONFIRMED:'confirmed', PREPARING:'preparing', SHIPPED:'shipped',
-    DELIVERED:'delivered', REFUNDED:'refunded', PENDING:'pending' };
+    DELIVERED:'delivered', REFUNDED:'refunded', PENDING:'pending',
+  };
   return 'badge badge-' + (map[status] || 'pending');
 }
 
-// ── Auth check ───────────────────────────────────────────────────────────────
+// ── Auth ─────────────────────────────────────────────────────────────────────
 async function requireAdmin() {
   try {
     const res = await fetch('/api/auth/me');
@@ -40,11 +42,11 @@ async function requireAdmin() {
 }
 
 async function logout() {
-  await fetch('/api/auth/logout', { method: 'POST' });
+  await fetch('/api/auth/logout', { method:'POST' });
   window.location.href = '/admin/login.html';
 }
 
-// ── Active nav link ──────────────────────────────────────────────────────────
+// ── Active nav link ───────────────────────────────────────────────────────────
 function setActiveNav() {
   const path = window.location.pathname;
   document.querySelectorAll('.sidebar-nav a').forEach(a => {
@@ -52,4 +54,26 @@ function setActiveNav() {
   });
 }
 
-document.addEventListener('DOMContentLoaded', setActiveNav);
+// ── Mobile hamburger injection ────────────────────────────────────────────────
+function injectMenuBtn() {
+  const topbar = document.querySelector('.admin-topbar');
+  if (!topbar || topbar.querySelector('.menu-btn')) return;
+
+  // Wrap existing content
+  const h1 = topbar.querySelector('h1');
+  if (!h1) return;
+
+  const btn = document.createElement('button');
+  btn.className = 'menu-btn';
+  btn.setAttribute('aria-label', 'Abrir menu');
+  btn.innerHTML = '☰';
+  btn.onclick = openSidebar;
+
+  // If h1 is the first child, insert button before it
+  topbar.insertBefore(btn, h1);
+}
+
+document.addEventListener('DOMContentLoaded', () => {
+  setActiveNav();
+  injectMenuBtn();
+});

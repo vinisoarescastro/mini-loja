@@ -13,20 +13,39 @@ function saveCart(items) {
 
 function clearCart() { saveCart([]); }
 
+/**
+ * addItem — aceita dois formatos:
+ *   1. addItem({ id, name, price, image_url, images }, variation?, qty?)
+ *   2. addItem({ id, name, price, image, variationId, variationLabel }, _, qty?)
+ */
 function addItem(product, variation, qty = 1) {
+  // Suporte ao formato "flat" usado no index.html
+  const variationId    = variation?.id    ?? product.variationId    ?? null;
+  const variationLabel = variation?.label ?? product.variationLabel ?? null;
+  // Aceita image_url, image ou images[0]
+  const productImage   = product.image_url || product.image
+    || (Array.isArray(product.images) ? product.images[0] : null) || null;
+  // Todas as imagens para lightbox no carrinho
+  const productImages  = product.images?.length ? product.images
+    : (productImage ? [productImage] : []);
+
   const cart = loadCart();
-  const key = variation ? `${product.id}-${variation.id}` : String(product.id);
+  const key  = variationId ? `${product.id}-${variationId}` : String(product.id);
   const existing = cart.find(i => i.key === key);
 
   if (existing) {
     existing.quantity += qty;
   } else {
     cart.push({
-      key, productId: product.id, productName: product.name,
-      productImage: product.image_url,
-      variationId: variation?.id || null,
-      variationLabel: variation?.label || null,
-      price: product.price, quantity: qty,
+      key,
+      productId:      product.id,
+      productName:    product.name,
+      productImage,
+      productImages,
+      variationId,
+      variationLabel,
+      price:    product.price,
+      quantity: qty,
     });
   }
   saveCart(cart);
@@ -57,15 +76,12 @@ function fmt(val) {
   return new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(val);
 }
 
-// ── UI ───────────────────────────────────────────────────────────────────────
+// ── Drawer UI ─────────────────────────────────────────────────────────────────
 function updateCartUI() {
   const count = cartCount();
   document.querySelectorAll('.cart-count').forEach(el => el.textContent = count);
-
-  // ✅ Re-renderiza o drawer se estiver aberto
-  if (document.getElementById('cart-drawer')?.classList.contains('open')) {
-    renderDrawer();
-  }
+  const drawer = document.getElementById('cart-drawer');
+  if (drawer?.classList.contains('open')) renderDrawer();
 }
 
 function renderDrawer() {
@@ -75,17 +91,20 @@ function renderDrawer() {
   if (!body) return;
 
   const items = loadCart();
-
-  if (items.length === 0) {
+  if (!items.length) {
     body.innerHTML = '<div class="cart-empty">🛒<br>Seu carrinho está vazio</div>';
     if (total) total.textContent = '';
     if (checkoutBtn) checkoutBtn.disabled = true;
     return;
   }
 
+  const PLACEHOLDER = "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='64' height='64' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' fill='%23f1f5f9'/%3E%3Ctext x='50%25' y='50%25' dominant-baseline='middle' text-anchor='middle' font-size='24' fill='%23cbd5e1'%3E📦%3C/text%3E%3C/svg%3E";
+
   body.innerHTML = items.map(item => `
     <div class="cart-item">
-      <img src="${item.productImage || 'https://via.placeholder.com/64'}" alt="${item.productName}">
+      <img src="${item.productImage || PLACEHOLDER}"
+           alt="${item.productName}"
+           onerror="this.src='${PLACEHOLDER}'">
       <div class="cart-item-info">
         <div class="cart-item-name">${item.productName}</div>
         ${item.variationLabel ? `<div class="cart-item-var">${item.variationLabel}</div>` : ''}
@@ -94,7 +113,8 @@ function renderDrawer() {
           <button class="qty-btn" onclick="updateQty('${item.key}', ${item.quantity - 1})">−</button>
           <span>${item.quantity}</span>
           <button class="qty-btn" onclick="updateQty('${item.key}', ${item.quantity + 1})">+</button>
-          <button class="qty-btn" onclick="removeItem('${item.key}')" style="color:var(--danger);margin-left:4px">✕</button>
+          <button class="qty-btn" onclick="removeItem('${item.key}')"
+                  style="color:var(--danger);margin-left:4px">✕</button>
         </div>
       </div>
     </div>

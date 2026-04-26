@@ -1,9 +1,10 @@
-// sidebar HTML string used by all admin pages
 function sidebarHTML() {
   return `
-    <aside class="sidebar">
+    <div class="sidebar-overlay" id="sidebar-overlay" onclick="closeSidebar()"></div>
+    <aside class="sidebar" id="sidebar">
       <div class="sidebar-logo">
-        <img src="/img/logo/logoipsum-3-write.png" alt="MiniLoja" style="height:32px;width:auto;display:block;">
+        <img src="/img/logo/logoipsum-3-write.png" alt="MiniLoja">
+        <button class="sidebar-close-btn" onclick="closeSidebar()" aria-label="Fechar menu">✕</button>
       </div>
       <nav class="sidebar-nav">
         <a href="/admin/index.html">Dashboard</a>
@@ -13,9 +14,26 @@ function sidebarHTML() {
         <a href="/admin/users.html">Usuários</a>
       </nav>
       <div class="sidebar-footer">
-        <a href="/" target="_blank" style="font-size:.8rem;color:#64748b;display:block;margin-bottom:.5rem">↗ Ver Loja</a>
+        <a href="/" target="_blank">↗ Ver Loja</a>
         <button onclick="logout()">Sair</button>
       </div>
     </aside>
   `;
 }
+
+function openSidebar() {
+  document.getElementById('sidebar')?.classList.add('open');
+  document.getElementById('sidebar-overlay')?.classList.add('open');
+  document.body.style.overflow = 'hidden';
+}
+
+function closeSidebar() {
+  document.getElementById('sidebar')?.classList.remove('open');
+  document.getElementById('sidebar-overlay')?.classList.remove('open');
+  document.body.style.overflow = '';
+}
+
+// Close sidebar on ESC
+document.addEventListener('keydown', e => {
+  if (e.key === 'Escape') closeSidebar();
+});

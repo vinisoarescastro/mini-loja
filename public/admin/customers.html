@@ -11,19 +11,22 @@
 <div class="admin-wrapper">
   <div id="sidebar-root"></div>
   <div class="admin-main">
-    <div class="admin-topbar"><h1>Clientes</h1></div>
+    <div class="admin-topbar">
+      <h1>Clientes</h1>
+      <button class="btn btn-primary" onclick="openModal()">+ Novo Cliente</button>
+    </div>
     <div class="admin-content">
       <div class="table-wrap">
         <div class="table-header">
           <div class="filters">
-            <input type="text" id="f-search" placeholder="Buscar nome ou telefone…" oninput="debounceLoad()">
+            <input type="text" id="f-search" placeholder="Buscar nome, telefone ou e-mail…" oninput="debounceLoad()">
           </div>
         </div>
         <div style="overflow-x:auto">
           <table>
             <thead><tr>
-              <th>Nome</th><th>Telefone</th><th>E-mail</th>
-              <th>Pedidos</th><th>Total Gasto</th><th>Último Pedido</th>
+              <th>Nome</th><th>Telefone</th><th>E-mail</th><th>CPF</th>
+              <th>Pedidos</th><th>Total Gasto</th><th>Último Pedido</th><th></th>
             </tr></thead>
             <tbody id="customers-body"></tbody>
           </table>
@@ -34,20 +37,83 @@
   </div>
 </div>
 
+<!-- Modal ────────────────────────────────────────────────────────────────── -->
+<div class="modal-overlay" id="modal" style="display:none" onclick="if(event.target===this)closeModal()">
+  <div class="modal" onclick="event.stopPropagation()">
+    <div class="modal-header">
+      <h2 id="modal-title">Novo Cliente</h2>
+      <button class="modal-close" onclick="closeModal()">✕</button>
+    </div>
+    <div class="modal-body">
+      <input type="hidden" id="c-id">
+
+      <div class="form-group">
+        <label>Nome completo *</label>
+        <input type="text" id="c-name" placeholder="João Silva">
+        <div class="form-error" id="err-name"></div>
+      </div>
+
+      <div class="form-group">
+        <label>Telefone / WhatsApp *</label>
+        <input type="tel" id="c-phone" placeholder="(11) 99999-9999"
+               oninput="maskPhone(this)" maxlength="15">
+        <div class="form-error" id="err-phone"></div>
+      </div>
+
+      <div class="form-group">
+        <label>CPF</label>
+        <input type="text" id="c-cpf" placeholder="000.000.000-00"
+               oninput="maskCPF(this)" maxlength="14" inputmode="numeric">
+        <div class="form-error" id="err-cpf"></div>
+      </div>
+
+      <div class="form-group">
+        <label>E-mail</label>
+        <input type="email" id="c-email" placeholder="joao@exemplo.com">
+        <div class="form-error" id="err-email"></div>
+      </div>
+
+      <div class="form-error" id="err-modal"></div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-secondary" onclick="closeModal()">Cancelar</button>
+      <button class="btn btn-primary" onclick="saveCustomer()">Salvar</button>
+    </div>
+  </div>
+</div>
+
 <script src="/admin/js/admin.js"></script>
 <script src="/admin/js/sidebar.js"></script>
 <script>
   document.getElementById('sidebar-root').innerHTML = sidebarHTML();
   let debounceTimer;
+  let currentPage = 1;
 
   function debounceLoad() {
     clearTimeout(debounceTimer);
     debounceTimer = setTimeout(() => loadCustomers(1), 400);
   }
 
+  // ── Máscaras ──────────────────────────────────────────────────────────────
+  function maskPhone(input) {
+    let v = input.value.replace(/\D/g, '').slice(0, 11);
+    v = v.length <= 10
+      ? v.replace(/^(\d{2})(\d{4})(\d{0,4})/, '($1) $2-$3')
+      : v.replace(/^(\d{2})(\d{5})(\d{0,4})/, '($1) $2-$3');
+    input.value = v;
+  }
+
+  function maskCPF(input) {
+    let v = input.value.replace(/\D/g, '').slice(0, 11);
+    input.value = v.replace(/^(\d{3})(\d{3})(\d{3})(\d{0,2})/, '$1.$2.$3-$4');
+  }
+
+  // ── Carregar clientes ─────────────────────────────────────────────────────
   async function loadCustomers(page = 1) {
+    currentPage = page;
+    await requireAdmin();
     const params = new URLSearchParams({ page, search: document.getElementById('f-search').value });
-    const res = await fetch(`/api/admin/customers?${params}`);
+    const res  = await fetch(`/api/admin/customers?${params}`);
     const data = await res.json();
 
     document.getElementById('customers-body').innerHTML = data.customers.map(c => `
@@ -55,15 +121,35 @@
         <td><strong>${c.name}</strong></td>
         <td>${c.phone}</td>
         <td>${c.email || '—'}</td>
+        <td>${c.cpf ? formatCPFDisplay(c.cpf) : '—'}</td>
         <td>${c.total_orders}</td>
         <td>${fmt(c.total_spent)}</td>
         <td>${fmtDate(c.last_order)}</td>
+        <td style="white-space:nowrap">
+          <button class="action-btn action-btn-edit" onclick="editCustomer(${JSON.stringify(c).replace(/"/g,'&quot;')})">
+            ✏ Editar
+          </button>
+          <button class="action-btn action-btn-delete" style="margin-left:.3rem"
+            onclick="deleteCustomer(${c.id},'${c.name.replace(/'/g,'\\\'')}')" 
+            ${c.total_orders > 0 ? 'title="Possui pedidos — não pode excluir" style="opacity:.4;cursor:not-allowed" disabled' : ''}>
+            🗑 Excluir
+          </button>
+        </td>
       </tr>
-    `).join('') || `<tr><td colspan="6" class="table-empty">Nenhum cliente</td></tr>`;
+    `).join('') || `<tr><td colspan="8" class="table-empty">Nenhum cliente encontrado</td></tr>`;
 
+    renderPagination(data.pages, page);
+  }
+
+  function formatCPFDisplay(cpf) {
+    const d = cpf.replace(/\D/g, '');
+    return d.length === 11 ? d.replace(/(\d{3})(\d{3})(\d{3})(\d{2})/, '$1.$2.$3-$4') : cpf;
+  }
+
+  function renderPagination(pages, page) {
     const pag = document.getElementById('pagination');
     pag.innerHTML = '';
-    for (let i = 1; i <= data.pages; i++) {
+    for (let i = 1; i <= pages; i++) {
       const btn = document.createElement('button');
       btn.className = 'page-btn' + (i === page ? ' active' : '');
       btn.textContent = i;
@@ -71,6 +157,83 @@
       pag.appendChild(btn);
     }
   }
+
+  // ── Modal ─────────────────────────────────────────────────────────────────
+  function openModal(customer = null) {
+    document.getElementById('c-id').value    = customer?.id    || '';
+    document.getElementById('c-name').value  = customer?.name  || '';
+    document.getElementById('c-phone').value = customer?.phone || '';
+    document.getElementById('c-cpf').value   = customer?.cpf   ? formatCPFDisplay(customer.cpf) : '';
+    document.getElementById('c-email').value = customer?.email || '';
+    document.getElementById('modal-title').textContent = customer ? 'Editar Cliente' : 'Novo Cliente';
+    document.querySelectorAll('.form-error').forEach(e => e.textContent = '');
+    document.getElementById('modal').style.display = 'flex';
+  }
+
+  function editCustomer(c) {
+    // c pode vir como objeto já parseado (via JSON inline) ou precisar de parse
+    if (typeof c === 'string') c = JSON.parse(c);
+    openModal(c);
+  }
+
+  function closeModal() {
+    document.getElementById('modal').style.display = 'none';
+  }
+
+  async function saveCustomer() {
+    const id    = document.getElementById('c-id').value;
+    const name  = document.getElementById('c-name').value.trim();
+    const phone = document.getElementById('c-phone').value.replace(/\D/g, '');
+    const cpf   = document.getElementById('c-cpf').value.replace(/\D/g, '');
+    const email = document.getElementById('c-email').value.trim();
+
+    let valid = true;
+    document.querySelectorAll('.form-error').forEach(e => e.textContent = '');
+
+    if (!name)           { document.getElementById('err-name').textContent  = 'Nome obrigatório.';         valid = false; }
+    if (phone.length < 10) { document.getElementById('err-phone').textContent = 'Telefone inválido.';      valid = false; }
+    if (cpf && cpf.length !== 11) { document.getElementById('err-cpf').textContent = 'CPF inválido.';     valid = false; }
+    if (email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+      document.getElementById('err-email').textContent = 'E-mail inválido.'; valid = false;
+    }
+    if (!valid) return;
+
+    const body = { name, phone, email: email || null, cpf: cpf || null };
+    const url    = id ? `/api/admin/customers/${id}` : '/api/admin/customers';
+    const method = id ? 'PATCH' : 'POST';
+
+    const res = await fetch(url, {
+      method, headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body),
+    });
+    const data = await res.json();
+    if (!res.ok) {
+      document.getElementById('err-modal').textContent = data.error || 'Erro ao salvar.';
+      return;
+    }
+    closeModal();
+    loadCustomers(currentPage);
+  }
+
+  async function deleteCustomer(id, name) {
+    if (!confirm(`Excluir o cliente "${name}"?\nEsta ação não pode ser desfeita.`)) return;
+    const res = await fetch(`/api/admin/customers/${id}`, { method: 'DELETE' });
+    const data = await res.json();
+    if (!res.ok) { alert(data.error || 'Erro ao excluir.'); return; }
+    loadCustomers(currentPage);
+  }
+
+  // ── Action button styles (inline if admin.css isn't the updated version) ──
+  const style = document.createElement('style');
+  style.textContent = `
+    .action-btn { display:inline-flex;align-items:center;gap:.25rem;padding:.3rem .65rem;
+      border-radius:6px;font-size:.8rem;font-weight:500;border:1.5px solid transparent;
+      cursor:pointer;transition:all .15s;background:none; }
+    .action-btn-edit  { border-color:#e2e8f0;color:#374151; }
+    .action-btn-edit:hover  { border-color:#6366f1;color:#6366f1;background:#f5f3ff; }
+    .action-btn-delete { border-color:#fee2e2;color:#dc2626; }
+    .action-btn-delete:hover:not([disabled]) { background:#fef2f2; }
+  `;
+  document.head.appendChild(style);
 
   requireAdmin().then(() => loadCustomers());
 </script>
