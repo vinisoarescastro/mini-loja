@@ -120,9 +120,10 @@ db.exec(`
 // ── Migrações para bancos já existentes ──────────────────────────────────────
 // Cada item é tentado individualmente; erros de "já existe" são silenciados.
 const migrations = [
-  'ALTER TABLE products  ADD COLUMN category_id   INTEGER REFERENCES categories(id)',
-  'ALTER TABLE products  ADD COLUMN made_to_order INTEGER NOT NULL DEFAULT 0',
-  'ALTER TABLE customers ADD COLUMN cpf           TEXT',
+  'ALTER TABLE products  ADD COLUMN category_id        INTEGER REFERENCES categories(id)',
+  'ALTER TABLE products  ADD COLUMN made_to_order      INTEGER NOT NULL DEFAULT 0',
+  'ALTER TABLE products  ADD COLUMN preorder_deadline  TEXT',
+  'ALTER TABLE customers ADD COLUMN cpf                TEXT',
   `CREATE TABLE IF NOT EXISTS product_images (
      id         INTEGER PRIMARY KEY AUTOINCREMENT,
      product_id INTEGER NOT NULL REFERENCES products(id) ON DELETE CASCADE,
