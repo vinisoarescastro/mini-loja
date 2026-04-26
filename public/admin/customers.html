@@ -6,6 +6,16 @@
   <title>Clientes — Admin MiniLoja</title>
   <link rel="stylesheet" href="/css/style.css">
   <link rel="stylesheet" href="/admin/admin.css">
+  <style>
+    .action-btn {
+      display: inline-flex;
+      align-items: center;
+      gap: .3rem;
+      font-size: .8rem;
+      padding: .3rem .65rem;
+    }
+    .action-btn svg { width: 13px; height: 13px; flex-shrink: 0; }
+  </style>
 </head>
 <body>
 <div class="admin-wrapper">
@@ -42,7 +52,11 @@
   <div class="modal" onclick="event.stopPropagation()">
     <div class="modal-header">
       <h2 id="modal-title">Novo Cliente</h2>
-      <button class="modal-close" onclick="closeModal()">✕</button>
+      <button class="modal-close" onclick="closeModal()">
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="width:18px;height:18px">
+          <line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>
+        </svg>
+      </button>
     </div>
     <div class="modal-body">
       <input type="hidden" id="c-id">
@@ -94,7 +108,6 @@
     debounceTimer = setTimeout(() => loadCustomers(1), 400);
   }
 
-  // ── Máscaras ──────────────────────────────────────────────────────────────
   function maskPhone(input) {
     let v = input.value.replace(/\D/g, '').slice(0, 11);
     v = v.length <= 10
@@ -108,13 +121,16 @@
     input.value = v.replace(/^(\d{3})(\d{3})(\d{3})(\d{0,2})/, '$1.$2.$3-$4');
   }
 
-  // ── Carregar clientes ─────────────────────────────────────────────────────
   async function loadCustomers(page = 1) {
     currentPage = page;
     await requireAdmin();
     const params = new URLSearchParams({ page, search: document.getElementById('f-search').value });
     const res  = await fetch(`/api/admin/customers?${params}`);
     const data = await res.json();
+
+    // SVGs reutilizáveis
+    const iconEdit = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>`;
+    const iconDel  = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M10 11v6"/><path d="M14 11v6"/><path d="M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"/></svg>`;
 
     document.getElementById('customers-body').innerHTML = data.customers.map(c => `
       <tr>
@@ -126,13 +142,14 @@
         <td>${fmt(c.total_spent)}</td>
         <td>${fmtDate(c.last_order)}</td>
         <td style="white-space:nowrap">
-          <button class="action-btn action-btn-edit" onclick="editCustomer(${JSON.stringify(c).replace(/"/g,'&quot;')})">
-            ✏ Editar
+          <button class="btn btn-secondary action-btn"
+            onclick="editCustomer(${JSON.stringify(c).replace(/"/g,'&quot;')})">
+            ${iconEdit} Editar
           </button>
-          <button class="action-btn action-btn-delete" style="margin-left:.3rem"
-            onclick="deleteCustomer(${c.id},'${c.name.replace(/'/g,'\\\'')}')" 
+          <button class="btn btn-secondary action-btn" style="margin-left:.3rem;color:var(--danger);border-color:var(--danger)"
+            onclick="deleteCustomer(${c.id},'${c.name.replace(/'/g,'\\\'')}')"
             ${c.total_orders > 0 ? 'title="Possui pedidos — não pode excluir" style="opacity:.4;cursor:not-allowed" disabled' : ''}>
-            🗑 Excluir
+            ${iconDel} Excluir
           </button>
         </td>
       </tr>
@@ -158,7 +175,6 @@
     }
   }
 
-  // ── Modal ─────────────────────────────────────────────────────────────────
   function openModal(customer = null) {
     document.getElementById('c-id').value    = customer?.id    || '';
     document.getElementById('c-name').value  = customer?.name  || '';
@@ -171,7 +187,6 @@
   }
 
   function editCustomer(c) {
-    // c pode vir como objeto já parseado (via JSON inline) ou precisar de parse
     if (typeof c === 'string') c = JSON.parse(c);
     openModal(c);
   }
@@ -190,15 +205,15 @@
     let valid = true;
     document.querySelectorAll('.form-error').forEach(e => e.textContent = '');
 
-    if (!name)           { document.getElementById('err-name').textContent  = 'Nome obrigatório.';         valid = false; }
-    if (phone.length < 10) { document.getElementById('err-phone').textContent = 'Telefone inválido.';      valid = false; }
-    if (cpf && cpf.length !== 11) { document.getElementById('err-cpf').textContent = 'CPF inválido.';     valid = false; }
+    if (!name)             { document.getElementById('err-name').textContent  = 'Nome obrigatório.';     valid = false; }
+    if (phone.length < 10) { document.getElementById('err-phone').textContent = 'Telefone inválido.';    valid = false; }
+    if (cpf && cpf.length !== 11) { document.getElementById('err-cpf').textContent = 'CPF inválido.';   valid = false; }
     if (email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
       document.getElementById('err-email').textContent = 'E-mail inválido.'; valid = false;
     }
     if (!valid) return;
 
-    const body = { name, phone, email: email || null, cpf: cpf || null };
+    const body   = { name, phone, email: email || null, cpf: cpf || null };
     const url    = id ? `/api/admin/customers/${id}` : '/api/admin/customers';
     const method = id ? 'PATCH' : 'POST';
 
@@ -216,26 +231,13 @@
 
   async function deleteCustomer(id, name) {
     if (!confirm(`Excluir o cliente "${name}"?\nEsta ação não pode ser desfeita.`)) return;
-    const res = await fetch(`/api/admin/customers/${id}`, { method: 'DELETE' });
+    const res  = await fetch(`/api/admin/customers/${id}`, { method: 'DELETE' });
     const data = await res.json();
     if (!res.ok) { alert(data.error || 'Erro ao excluir.'); return; }
     loadCustomers(currentPage);
   }
 
-  // ── Action button styles (inline if admin.css isn't the updated version) ──
-  const style = document.createElement('style');
-  style.textContent = `
-    .action-btn { display:inline-flex;align-items:center;gap:.25rem;padding:.3rem .65rem;
-      border-radius:6px;font-size:.8rem;font-weight:500;border:1.5px solid transparent;
-      cursor:pointer;transition:all .15s;background:none; }
-    .action-btn-edit  { border-color:#e2e8f0;color:#374151; }
-    .action-btn-edit:hover  { border-color:#6366f1;color:#6366f1;background:#f5f3ff; }
-    .action-btn-delete { border-color:#fee2e2;color:#dc2626; }
-    .action-btn-delete:hover:not([disabled]) { background:#fef2f2; }
-  `;
-  document.head.appendChild(style);
-
-  requireAdmin().then(() => loadCustomers());
+  loadCustomers();
 </script>
 </body>
 </html>

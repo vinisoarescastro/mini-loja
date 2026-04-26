@@ -13,11 +13,38 @@ function deadlinePassed(deadline) {
   return d < new Date();
 }
 
+/** Valida CPF com dígitos verificadores */
+function validarCPF(cpf) {
+  const c = String(cpf).replace(/\D/g, '');
+  if (c.length !== 11 || /^(\d)\1+$/.test(c)) return false;
+  let sum = 0;
+  for (let i = 1; i <= 9; i++) sum += parseInt(c[i - 1]) * (11 - i);
+  let rem = (sum * 10) % 11;
+  if (rem === 10 || rem === 11) rem = 0;
+  if (rem !== parseInt(c[9])) return false;
+  sum = 0;
+  for (let i = 1; i <= 10; i++) sum += parseInt(c[i - 1]) * (12 - i);
+  rem = (sum * 10) % 11;
+  if (rem === 10 || rem === 11) rem = 0;
+  return rem === parseInt(c[10]);
+}
+
 router.post('/', async (req, res) => {
   const { name, phone, email, cpf, items } = req.body;
 
-  if (!name || !phone || !Array.isArray(items) || items.length === 0)
-    return res.status(400).json({ error: 'Dados incompletos' });
+  // ── Validações obrigatórias ───────────────────────────────────────────────
+  if (!name || !phone || !email || !cpf)
+    return res.status(400).json({ error: 'Todos os campos são obrigatórios: nome, WhatsApp, e-mail e CPF.' });
+
+  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email))
+    return res.status(400).json({ error: 'E-mail inválido.' });
+
+  const cpfDigits = String(cpf).replace(/\D/g, '');
+  if (!validarCPF(cpfDigits))
+    return res.status(400).json({ error: 'CPF inválido.' });
+
+  if (!Array.isArray(items) || items.length === 0)
+    return res.status(400).json({ error: 'Carrinho vazio.' });
 
   try {
     const { orderId, code, orderItems, customer } = db.transaction(() => {
@@ -26,11 +53,11 @@ router.post('/', async (req, res) => {
       let cust = db.prepare('SELECT * FROM customers WHERE phone = ?').get(phone);
       if (!cust) {
         const r = db.prepare('INSERT INTO customers (name, phone, email, cpf) VALUES (?, ?, ?, ?)')
-          .run(name, phone, email || null, cpf || null);
+          .run(name, phone, email, cpfDigits);
         cust = db.prepare('SELECT * FROM customers WHERE id = ?').get(r.lastInsertRowid);
       } else {
         db.prepare('UPDATE customers SET name=?, email=COALESCE(?,email), cpf=COALESCE(?,cpf) WHERE id=?')
-          .run(name, email || null, cpf || null, cust.id);
+          .run(name, email, cpfDigits, cust.id);
       }
 
       let total = 0;
@@ -43,7 +70,7 @@ router.post('/', async (req, res) => {
         if (!product)
           throw { status: 400, error: `Produto ${item.productId} não encontrado` };
 
-        // ── Valida prazo de encomenda ───────────────────────────────────────
+        // ── Valida prazo de encomenda ─────────────────────────────────────
         if (product.made_to_order && deadlinePassed(product.preorder_deadline)) {
           throw {
             status: 400,
@@ -61,7 +88,6 @@ router.post('/', async (req, res) => {
           if (!variation)
             throw { status: 400, error: 'Variação inválida' };
 
-          // Sob encomenda: não verifica nem desconta estoque
           if (!product.made_to_order) {
             if (variation.stock < qty)
               throw {
@@ -82,7 +108,6 @@ router.post('/', async (req, res) => {
           });
 
         } else {
-          // Sob encomenda: não verifica nem desconta estoque
           if (!product.made_to_order) {
             if (product.stock < qty)
               throw {
@@ -136,7 +161,6 @@ router.post('/', async (req, res) => {
       preferenceId = mp.preferenceId;
     } catch (mpErr) {
       console.error('MP error:', mpErr.message);
-      // Reverte pedido e devolve estoque (só para produtos com estoque)
       db.transaction(() => {
         for (const i of orderItems) {
           const prod = db.prepare('SELECT made_to_order FROM products WHERE id = ?').get(i.product_id);

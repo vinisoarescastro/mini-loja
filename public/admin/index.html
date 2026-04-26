@@ -14,16 +14,24 @@
       margin-bottom: 1.5rem;
     }
     .stat-card { background: #fff; border-radius: 10px; padding: 1.25rem; border: 1px solid #e2e8f0; }
-    .stat-card.accent  { border-left: 4px solid #6366f1; }
-    .stat-card.green   { border-left: 4px solid #22c55e; }
-    .stat-card.orange  { border-left: 4px solid #f59e0b; }
-    .stat-card.blue    { border-left: 4px solid #3b82f6; }
-    .stat-card.red     { border-left: 4px solid #ef4444; }
+    .stat-card.accent { border-left: 4px solid #6366f1; }
+    .stat-card.blue   { border-left: 4px solid #3b82f6; }
+    .stat-card.green  { border-left: 4px solid #22c55e; }
+    .stat-card.orange { border-left: 4px solid #f59e0b; }
     .stat-label { font-size: .78rem; color: #64748b; font-weight: 600; text-transform: uppercase; letter-spacing: .05em; }
     .stat-value { font-size: 1.65rem; font-weight: 800; margin-top: .3rem; }
     .stat-sub   { font-size: .78rem; color: #94a3b8; margin-top: .15rem; }
+    .stat-icon  {
+      width: 36px; height: 36px; border-radius: 8px;
+      display: flex; align-items: center; justify-content: center;
+      margin-bottom: .75rem;
+    }
+    .stat-icon svg { width: 20px; height: 20px; }
+    .stat-card.accent .stat-icon { background: #ede9fe; color: #6366f1; }
+    .stat-card.blue   .stat-icon { background: #dbeafe; color: #3b82f6; }
+    .stat-card.green  .stat-icon { background: #dcfce7; color: #16a34a; }
+    .stat-card.orange .stat-icon { background: #fef3c7; color: #d97706; }
 
-    /* Top products table */
     .rank-num {
       display: inline-flex; align-items: center; justify-content: center;
       width: 22px; height: 22px; border-radius: 50%;
@@ -31,6 +39,11 @@
       background: #f1f5f9; color: #64748b;
     }
     .rank-num.top { background: #fef9c3; color: #854d0e; }
+
+    .table-section-title {
+      display: flex; align-items: center; gap: .5rem; font-weight: 600;
+    }
+    .table-section-title svg { width: 16px; height: 16px; color: #64748b; }
   </style>
 </head>
 <body>
@@ -42,33 +55,69 @@
 
       <!-- Stats row -->
       <div class="stats-grid-2">
+
+        <!-- Total de Pedidos -->
         <div class="stat-card accent">
+          <div class="stat-icon">
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M6 2 3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z"/><line x1="3" y1="6" x2="21" y2="6"/><path d="M16 10a4 4 0 0 1-8 0"/>
+            </svg>
+          </div>
           <div class="stat-label">Total de Pedidos</div>
           <div class="stat-value" id="s-total-orders">—</div>
-          <div class="stat-sub" id="s-pending-orders">— pendentes</div>
+          <div class="stat-sub">Excluindo cancelados</div>
         </div>
-        <div class="stat-card green">
-          <div class="stat-label">Vendas Aprovadas</div>
-          <div class="stat-value" id="s-approved">—</div>
+
+        <!-- Total Aprovados (contagem) -->
+        <div class="stat-card blue">
+          <div class="stat-icon">
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <polyline points="20 6 9 17 4 12"/>
+            </svg>
+          </div>
+          <div class="stat-label">Pedidos Aprovados</div>
+          <div class="stat-value" id="s-approved-orders">—</div>
           <div class="stat-sub">Pagamentos confirmados</div>
         </div>
+
+        <!-- Vendas Aprovadas (valor) -->
+        <div class="stat-card green">
+          <div class="stat-icon">
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/>
+            </svg>
+          </div>
+          <div class="stat-label">Vendas Aprovadas</div>
+          <div class="stat-value" id="s-approved">—</div>
+          <div class="stat-sub">Valor confirmado</div>
+        </div>
+
+        <!-- Vendas Pendentes (valor) -->
         <div class="stat-card orange">
+          <div class="stat-icon">
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/>
+            </svg>
+          </div>
           <div class="stat-label">Vendas Pendentes</div>
           <div class="stat-value" id="s-pending">—</div>
-          <div class="stat-sub">Aguardando pagamento</div>
+          <div class="stat-sub">Aguardando confirmação</div>
         </div>
-        <div class="stat-card blue">
-          <div class="stat-label">Receita Bruta</div>
-          <div class="stat-value" id="s-gross">—</div>
-          <div class="stat-sub">Todos os pedidos</div>
-        </div>
+
       </div>
 
       <div style="display:grid;grid-template-columns:1fr 1fr;gap:1rem;align-items:start">
 
         <!-- Pedidos recentes -->
         <div class="table-wrap">
-          <div class="table-header"><strong>Pedidos Recentes</strong></div>
+          <div class="table-header">
+            <span class="table-section-title">
+              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/>
+              </svg>
+              Pedidos Recentes
+            </span>
+          </div>
           <table>
             <thead><tr>
               <th>Código</th><th>Cliente</th><th>Total</th><th>Pagamento</th>
@@ -79,7 +128,14 @@
 
         <!-- Ranking de produtos -->
         <div class="table-wrap">
-          <div class="table-header"><strong>🏆 Produtos Mais Vendidos</strong></div>
+          <div class="table-header">
+            <span class="table-section-title">
+              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <polyline points="23 6 13.5 15.5 8.5 10.5 1 18"/><polyline points="17 6 23 6 23 12"/>
+              </svg>
+              Produtos Mais Vendidos
+            </span>
+          </div>
           <table>
             <thead><tr>
               <th>#</th><th>Produto</th><th style="text-align:right">Qtd</th><th style="text-align:right">Receita</th>
@@ -104,11 +160,10 @@
     if (!res.ok) return;
     const d = await res.json();
 
-    document.getElementById('s-total-orders').textContent   = d.totalOrders;
-    document.getElementById('s-pending-orders').textContent = `${d.pendingOrders} pendente${d.pendingOrders !== 1 ? 's' : ''}`;
-    document.getElementById('s-approved').textContent       = fmt(d.totalApproved);
-    document.getElementById('s-pending').textContent        = fmt(d.totalPending);
-    document.getElementById('s-gross').textContent          = fmt(d.totalGross);
+    document.getElementById('s-total-orders').textContent    = d.totalOrders;
+    document.getElementById('s-approved-orders').textContent = d.totalApprovedOrders;
+    document.getElementById('s-approved').textContent        = fmt(d.totalApproved);
+    document.getElementById('s-pending').textContent         = fmt(d.totalPending);
 
     // Pedidos recentes
     document.getElementById('recent-orders-body').innerHTML =

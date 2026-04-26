@@ -20,34 +20,62 @@ function fetchImagesMap(productIds) {
   return map;
 }
 
+const PAY_LABEL    = { PENDING:'Aguardando', APPROVED:'Aprovado', REJECTED:'Recusado', REFUNDED:'Estornado' };
+const STATUS_LABEL = { PENDING:'Pendente', CONFIRMED:'Confirmado', PREPARING:'Preparando', SHIPPED:'Enviado', DELIVERED:'Entregue', CANCELLED:'Cancelado' };
+
 // ── Dashboard ─────────────────────────────────────────────────────────────────
 router.get('/dashboard', (req, res) => {
-  const totalOrders   = db.prepare('SELECT COUNT(*) as n FROM orders').get().n;
-  const pendingOrders = db.prepare("SELECT COUNT(*) as n FROM orders WHERE order_status='PENDING'").get().n;
-  const totalGross    = db.prepare('SELECT COALESCE(SUM(total),0) as s FROM orders').get().s;
-  const totalApproved = db.prepare("SELECT COALESCE(SUM(total),0) as s FROM orders WHERE payment_status='APPROVED'").get().s;
-  const totalPending  = db.prepare("SELECT COALESCE(SUM(total),0) as s FROM orders WHERE payment_status='PENDING'").get().s;
+  // Pedidos cancelados excluídos de todas as métricas
+  const totalOrders = db.prepare(
+    "SELECT COUNT(*) as n FROM orders WHERE order_status != 'CANCELLED'"
+  ).get().n;
+
+  const totalApprovedOrders = db.prepare(
+    "SELECT COUNT(*) as n FROM orders WHERE payment_status='APPROVED' AND order_status != 'CANCELLED'"
+  ).get().n;
+
+  const totalApproved = db.prepare(
+    "SELECT COALESCE(SUM(total),0) as s FROM orders WHERE payment_status='APPROVED' AND order_status != 'CANCELLED'"
+  ).get().s;
+
+  const totalPending = db.prepare(
+    "SELECT COALESCE(SUM(total),0) as s FROM orders WHERE payment_status='PENDING' AND order_status != 'CANCELLED'"
+  ).get().s;
 
   const topProducts = db.prepare(`
     SELECT oi.product_name AS name, SUM(oi.quantity) AS qty, SUM(oi.quantity*oi.unit_price) AS revenue
-    FROM order_items oi JOIN orders o ON o.id=oi.order_id
-    GROUP BY oi.product_name ORDER BY qty DESC LIMIT 10
+    FROM order_items oi
+    JOIN orders o ON o.id = oi.order_id
+    WHERE o.order_status != 'CANCELLED'
+    GROUP BY oi.product_name
+    ORDER BY qty DESC
+    LIMIT 10
   `).all();
 
   const recentOrders = db.prepare(`
     SELECT o.*, c.name as customer_name, c.phone as customer_phone
-    FROM orders o JOIN customers c ON c.id=o.customer_id
-    ORDER BY o.created_at DESC LIMIT 10
+    FROM orders o
+    JOIN customers c ON c.id = o.customer_id
+    WHERE o.order_status != 'CANCELLED'
+    ORDER BY o.created_at DESC
+    LIMIT 10
   `).all();
 
-  res.json({ totalOrders, pendingOrders, totalGross, totalApproved, totalPending, topProducts, productBreakdown: topProducts, recentOrders });
+  res.json({
+    totalOrders,
+    totalApprovedOrders,
+    totalApproved,
+    totalPending,
+    topProducts,
+    recentOrders,
+  });
 });
 
-// ── Products (admin — todos, com imagens) ─────────────────────────────────────
+// ── Products (admin) ──────────────────────────────────────────────────────────
 router.get('/products', (req, res) => {
   const rows = db.prepare(`
     SELECT p.*,
-      COALESCE((SELECT SUM(oi.quantity) FROM order_items oi JOIN orders o ON o.id=oi.order_id WHERE oi.product_id=p.id),0) AS total_ordered,
+      COALESCE((SELECT SUM(oi.quantity) FROM order_items oi JOIN orders o ON o.id=oi.order_id WHERE oi.product_id=p.id AND o.order_status != 'CANCELLED'),0) AS total_ordered,
       GROUP_CONCAT(pv.id||':'||pv.label||':'||pv.stock,'|') AS variations_raw
     FROM products p
     LEFT JOIN product_variations pv ON pv.product_id=p.id
@@ -57,156 +85,292 @@ router.get('/products', (req, res) => {
   const ids    = rows.map(p=>p.id);
   const imgMap = fetchImagesMap(ids);
 
+  // Vendas por variação (excluindo cancelados)
+  const varSales = ids.length ? db.prepare(`
+    SELECT oi.variation_id, pv.label, SUM(oi.quantity) as sold
+    FROM order_items oi
+    JOIN product_variations pv ON pv.id = oi.variation_id
+    JOIN orders o ON o.id = oi.order_id
+    WHERE pv.product_id IN (${ids.map(()=>'?').join(',')})
+      AND o.order_status != 'CANCELLED'
+    GROUP BY oi.variation_id
+  `).all(...ids) : [];
+
+  const varSalesMap = {};
+  for (const vs of varSales) {
+    if (!varSalesMap[vs.variation_id]) varSalesMap[vs.variation_id] = {};
+    varSalesMap[vs.variation_id] = { label: vs.label, sold: vs.sold };
+  }
+
   res.json(rows.map(p => {
     const imgs = imgMap[p.id] || (p.image_url ? [p.image_url] : []);
+    const variations = p.variations_raw
+      ? p.variations_raw.split('|').map(v => {
+          const [id, label, stock] = v.split(':');
+          const vid  = Number(id);
+          const sold = varSalesMap[vid]?.sold ?? 0;
+          return { id: vid, label, stock: Number(stock), sold };
+        })
+      : [];
     return {
       ...p,
       active:        !!p.active,
       made_to_order: !!p.made_to_order,
       images: imgs,
       image_url: imgs[0] || p.image_url || null,
-      variations: p.variations_raw
-        ? p.variations_raw.split('|').map(v => { const [id,label,stock]=v.split(':'); return {id:Number(id),label,stock:Number(stock)}; })
-        : [],
+      variations,
       variations_raw: undefined,
     };
   }));
 });
 
 // ── Orders ────────────────────────────────────────────────────────────────────
-router.get('/orders', (req, res) => {
-  const { paymentStatus, orderStatus, search } = req.query;
-  const limit = 20, page = Math.max(1, parseInt(req.query.page,10)||1), offset = (page-1)*limit;
-  let where = '1=1'; const params = [];
-  if (paymentStatus) { where += ' AND o.payment_status=?'; params.push(paymentStatus); }
-  if (orderStatus)   { where += ' AND o.order_status=?';   params.push(orderStatus); }
-  if (search) { where += ' AND (o.code LIKE ? OR c.name LIKE ? OR c.phone LIKE ?)'; params.push(`%${search}%`,`%${search}%`,`%${search}%`); }
-  const total  = db.prepare(`SELECT COUNT(*) as n FROM orders o JOIN customers c ON c.id=o.customer_id WHERE ${where}`).get(...params).n;
-  const orders = db.prepare(`SELECT o.*, c.name as customer_name, c.phone as customer_phone FROM orders o JOIN customers c ON c.id=o.customer_id WHERE ${where} ORDER BY o.created_at DESC LIMIT ${limit} OFFSET ${offset}`).all(...params);
-  res.json({ orders, total, pages: Math.ceil(total/limit) });
+router.get('/orders', requireAdmin, (req, res) => {
+  const { page = 1, search = '', paymentStatus = '', orderStatus = '' } = req.query;
+  const limit  = 20;
+  const offset = (Number(page) - 1) * limit;
+
+  let where = '1=1';
+  const params = [];
+
+  if (search) {
+    where += ' AND (o.code LIKE ? OR c.name LIKE ? OR c.phone LIKE ?)';
+    const s = `%${search}%`;
+    params.push(s, s, s);
+  }
+  if (paymentStatus) { where += ' AND o.payment_status = ?'; params.push(paymentStatus); }
+  if (orderStatus)   { where += ' AND o.order_status = ?';   params.push(orderStatus);   }
+
+  const total = db.prepare(
+    `SELECT COUNT(*) as n FROM orders o JOIN customers c ON c.id=o.customer_id WHERE ${where}`
+  ).get(...params).n;
+
+  const orders = db.prepare(
+    `SELECT o.*, c.name as customer_name, c.phone as customer_phone, c.email as customer_email
+     FROM orders o JOIN customers c ON c.id=o.customer_id
+     WHERE ${where} ORDER BY o.created_at DESC LIMIT ? OFFSET ?`
+  ).all(...params, limit, offset);
+
+  res.json({ orders, total, pages: Math.ceil(total / limit) });
 });
 
-router.get('/orders/:id', (req, res) => {
-  const order = db.prepare(`SELECT o.*, c.name as customer_name, c.phone as customer_phone, c.email as customer_email, p.payment_url, p.mp_payment_id FROM orders o JOIN customers c ON c.id=o.customer_id LEFT JOIN payments p ON p.order_id=o.id WHERE o.id=?`).get(req.params.id);
-  if (!order) return res.status(404).json({ error: 'Pedido não encontrado' });
-  order.items = db.prepare('SELECT * FROM order_items WHERE order_id=?').all(order.id);
-  res.json(order);
+// ── Orders Export (CSV) ───────────────────────────────────────────────────────
+router.get('/orders/export', requireAdmin, (req, res) => {
+  const { search = '', paymentStatus = '', orderStatus = '', dateFrom = '', dateTo = '' } = req.query;
+
+  let where = '1=1';
+  const params = [];
+
+  if (search) {
+    where += ' AND (o.code LIKE ? OR c.name LIKE ? OR c.phone LIKE ?)';
+    const s = `%${search}%`;
+    params.push(s, s, s);
+  }
+  if (paymentStatus) { where += ' AND o.payment_status = ?'; params.push(paymentStatus); }
+  if (orderStatus)   { where += ' AND o.order_status = ?';   params.push(orderStatus);   }
+  if (dateFrom)      { where += ' AND DATE(o.created_at) >= ?'; params.push(dateFrom);   }
+  if (dateTo)        { where += ' AND DATE(o.created_at) <= ?'; params.push(dateTo);     }
+
+  const orders = db.prepare(`
+    SELECT
+      o.code,
+      c.name   AS cliente,
+      c.phone  AS whatsapp,
+      c.email  AS email,
+      c.cpf    AS cpf,
+      o.total,
+      o.payment_status,
+      o.order_status,
+      o.created_at,
+      (SELECT GROUP_CONCAT(oi2.product_name ||
+        CASE WHEN oi2.variation_label IS NOT NULL AND oi2.variation_label != '' THEN ' (' || oi2.variation_label || ')' ELSE '' END
+        || ' x' || oi2.quantity, ' | ')
+       FROM order_items oi2 WHERE oi2.order_id = o.id) AS itens
+    FROM orders o
+    JOIN customers c ON c.id = o.customer_id
+    WHERE ${where}
+    ORDER BY o.created_at DESC
+  `).all(...params);
+
+  const esc = v => `"${String(v ?? '').replace(/"/g, '""')}"`;
+
+  const header = ['Código','Cliente','WhatsApp','E-mail','CPF','Total (R$)','Pagamento','Status','Data','Itens'];
+  const rows = orders.map(o => [
+    o.code,
+    o.cliente,
+    o.whatsapp,
+    o.email || '',
+    o.cpf   || '',
+    String(o.total).replace('.', ','),
+    PAY_LABEL[o.payment_status]    || o.payment_status,
+    STATUS_LABEL[o.order_status]   || o.order_status,
+    new Date(o.created_at).toLocaleString('pt-BR'),
+    o.itens || '',
+  ]);
+
+  const csv = [header, ...rows]
+    .map(r => r.map(esc).join(';'))
+    .join('\r\n');
+
+  const filename = `pedidos-${new Date().toISOString().slice(0,10)}.csv`;
+  res.setHeader('Content-Type', 'text/csv; charset=utf-8');
+  res.setHeader('Content-Disposition', `attachment; filename="${filename}"`);
+  res.send('\uFEFF' + csv); // BOM UTF-8 para Excel reconhecer acentuação
 });
 
-router.patch('/orders/:id', (req, res) => {
-  const { orderStatus, paymentStatus } = req.body;
-  const fields = [], params = [];
-  if (orderStatus)   { fields.push('order_status=?');   params.push(orderStatus); }
-  if (paymentStatus) { fields.push('payment_status=?'); params.push(paymentStatus); }
-  if (!fields.length) return res.status(400).json({ error: 'Nada a atualizar' });
-  params.push(parseInt(req.params.id,10));
-  db.prepare(`UPDATE orders SET ${fields.join(',')} WHERE id=?`).run(...params);
+// ── Order detail ──────────────────────────────────────────────────────────────
+router.get('/orders/:id', requireAdmin, (req, res) => {
+  const o = db.prepare(
+    `SELECT o.*, c.name as customer_name, c.phone as customer_phone, c.email as customer_email, c.cpf as customer_cpf
+     FROM orders o JOIN customers c ON c.id=o.customer_id WHERE o.id=?`
+  ).get(req.params.id);
+  if (!o) return res.status(404).json({ error: 'Pedido não encontrado' });
+  o.items = db.prepare('SELECT * FROM order_items WHERE order_id=?').all(o.id);
+  res.json(o);
+});
+
+// ── Order update ──────────────────────────────────────────────────────────────
+router.patch('/orders/:id', requireAdmin, (req, res) => {
+  const { payment_status, order_status } = req.body;
+  const fields = [];
+  const vals   = [];
+  if (payment_status) { fields.push('payment_status=?'); vals.push(payment_status); }
+  if (order_status)   { fields.push('order_status=?');   vals.push(order_status);   }
+  if (!fields.length) return res.status(400).json({ error: 'Nada para atualizar' });
+  vals.push(req.params.id);
+  db.prepare(`UPDATE orders SET ${fields.join(',')} WHERE id=?`).run(...vals);
   res.json({ ok: true });
 });
 
-router.post('/orders', (req, res) => {
-  const { customer, items, order_status='CONFIRMED', payment_status='APPROVED' } = req.body;
-  if (!customer || !Array.isArray(items) || !items.length) return res.status(400).json({ error: 'Dados incompletos' });
+// ── Create order (admin) ──────────────────────────────────────────────────────
+router.post('/orders', requireAdmin, (req, res) => {
+  const { customer, items, order_status = 'CONFIRMED', payment_status = 'PENDING' } = req.body;
+  if (!customer?.name || !customer?.phone || !Array.isArray(items) || !items.length)
+    return res.status(400).json({ error: 'Dados incompletos' });
+
   try {
-    const { orderId, code } = db.transaction(() => {
-      let cust;
-      if (customer.id) {
-        cust = db.prepare('SELECT * FROM customers WHERE id=?').get(customer.id);
-        if (!cust) throw { status:400, error:'Cliente não encontrado' };
+    const result = db.transaction(() => {
+      let cust = db.prepare('SELECT * FROM customers WHERE phone=?').get(customer.phone);
+      if (!cust) {
+        const r = db.prepare('INSERT INTO customers (name,phone,email,cpf) VALUES (?,?,?,?)')
+          .run(customer.name, customer.phone, customer.email||null, customer.cpf||null);
+        cust = db.prepare('SELECT * FROM customers WHERE id=?').get(r.lastInsertRowid);
       } else {
-        if (!customer.phone) throw { status:400, error:'Telefone obrigatório' };
-        cust = db.prepare('SELECT * FROM customers WHERE phone=?').get(customer.phone);
-        if (!cust) {
-          const r = db.prepare('INSERT INTO customers (name,phone,email,cpf) VALUES (?,?,?,?)').run(customer.name||'Sem nome',customer.phone,customer.email||null,customer.cpf||null);
-          cust = db.prepare('SELECT * FROM customers WHERE id=?').get(r.lastInsertRowid);
-        }
+        db.prepare('UPDATE customers SET name=?,email=COALESCE(?,email),cpf=COALESCE(?,cpf) WHERE id=?')
+          .run(customer.name, customer.email||null, customer.cpf||null, cust.id);
       }
-      let total = 0; const orderItems = [];
+
+      let total = 0;
+      const orderItems = [];
       for (const item of items) {
-        const qty = Math.max(1,parseInt(item.quantity)||1);
         const product = db.prepare('SELECT * FROM products WHERE id=?').get(item.product_id);
         if (!product) throw { status:400, error:`Produto ${item.product_id} não encontrado` };
-        const variation = item.variation_id ? db.prepare('SELECT * FROM product_variations WHERE id=?').get(item.variation_id) : null;
-        const unitPrice = parseFloat(item.unit_price)||product.price;
-        total += unitPrice*qty;
-        orderItems.push({ product_id:product.id, variation_id:variation?.id??null, product_name:product.name, variation_label:variation?.label??null, quantity:qty, unit_price:unitPrice });
+        const variation = item.variation_id
+          ? db.prepare('SELECT * FROM product_variations WHERE id=? AND product_id=?').get(item.variation_id, product.id)
+          : null;
+        const unit_price = item.unit_price || product.price;
+        total += unit_price * item.quantity;
+        orderItems.push({
+          product_id: product.id, product_name: product.name,
+          variation_id: variation?.id||null, variation_label: variation?.label||null,
+          quantity: item.quantity, unit_price,
+        });
       }
+
       const code = generateOrderCode();
-      const { lastInsertRowid: orderId } = db.prepare('INSERT INTO orders (code,customer_id,total,order_status,payment_status) VALUES (?,?,?,?,?)').run(code,cust.id,total,order_status,payment_status);
-      const ins = db.prepare('INSERT INTO order_items (order_id,product_id,variation_id,product_name,variation_label,quantity,unit_price) VALUES (?,?,?,?,?,?,?)');
-      orderItems.forEach(i => ins.run(orderId,i.product_id,i.variation_id,i.product_name,i.variation_label,i.quantity,i.unit_price));
+      const { lastInsertRowid: orderId } = db.prepare(
+        'INSERT INTO orders (code,customer_id,total,order_status,payment_status) VALUES (?,?,?,?,?)'
+      ).run(code, cust.id, total, order_status, payment_status);
+
+      const insItem = db.prepare(
+        'INSERT INTO order_items (order_id,product_id,product_name,variation_id,variation_label,quantity,unit_price) VALUES (?,?,?,?,?,?,?)'
+      );
+      for (const it of orderItems)
+        insItem.run(orderId, it.product_id, it.product_name, it.variation_id, it.variation_label, it.quantity, it.unit_price);
+
       return { orderId, code };
     })();
-    res.status(201).json({ id: orderId, code });
-  } catch(err) {
-    if (err.status) return res.status(err.status).json({ error: err.error });
-    console.error(err); res.status(500).json({ error:'Erro interno' });
+
+    res.status(201).json(result);
+  } catch (err) {
+    res.status(err.status||500).json({ error: err.error||err.message||'Erro interno' });
   }
 });
 
 // ── Customers ─────────────────────────────────────────────────────────────────
-router.get('/customers', (req, res) => {
-  const { search } = req.query;
-  const limit=20, page=Math.max(1,parseInt(req.query.page,10)||1), offset=(page-1)*limit;
-  let where='1=1'; const params=[];
-  if (search) { where+=' AND (c.name LIKE ? OR c.phone LIKE ? OR c.email LIKE ?)'; params.push(`%${search}%`,`%${search}%`,`%${search}%`); }
+router.get('/customers', requireAdmin, (req, res) => {
+  const { page = 1, search = '' } = req.query;
+  const limit  = 20;
+  const offset = (Number(page) - 1) * limit;
+  let where = '1=1';
+  const params = [];
+  if (search) {
+    where += ' AND (c.name LIKE ? OR c.phone LIKE ? OR c.email LIKE ?)';
+    const s = `%${search}%`;
+    params.push(s, s, s);
+  }
   const total = db.prepare(`SELECT COUNT(*) as n FROM customers c WHERE ${where}`).get(...params).n;
-  const customers = db.prepare(`SELECT c.*, COUNT(o.id) as total_orders, COALESCE(SUM(o.total),0) as total_spent, MAX(o.created_at) as last_order FROM customers c LEFT JOIN orders o ON o.customer_id=c.id WHERE ${where} GROUP BY c.id ORDER BY c.created_at DESC LIMIT ${limit} OFFSET ${offset}`).all(...params);
-  res.json({ customers, total, pages:Math.ceil(total/limit) });
+  const customers = db.prepare(`
+    SELECT c.*,
+      COUNT(DISTINCT o.id) as total_orders,
+      COALESCE(SUM(o.total),0) as total_spent,
+      MAX(o.created_at) as last_order
+    FROM customers c
+    LEFT JOIN orders o ON o.customer_id = c.id
+    WHERE ${where}
+    GROUP BY c.id ORDER BY c.id DESC LIMIT ? OFFSET ?
+  `).all(...params, limit, offset);
+  res.json({ customers, total, pages: Math.ceil(total / limit) });
 });
 
-router.post('/customers', (req, res) => {
+router.post('/customers', requireAdmin, (req, res) => {
   const { name, phone, email, cpf } = req.body;
-  if (!name || !phone) return res.status(400).json({ error:'Nome e telefone obrigatórios' });
-  if (db.prepare('SELECT id FROM customers WHERE phone=?').get(phone)) return res.status(409).json({ error:'Telefone já cadastrado' });
-  const r = db.prepare('INSERT INTO customers (name,phone,email,cpf) VALUES (?,?,?,?)').run(name,phone,email||null,cpf||null);
-  res.status(201).json({ id:r.lastInsertRowid });
+  if (!name || !phone) return res.status(400).json({ error: 'Nome e telefone obrigatórios' });
+  const exists = db.prepare('SELECT id FROM customers WHERE phone=?').get(phone);
+  if (exists) return res.status(409).json({ error: 'Telefone já cadastrado' });
+  const r = db.prepare('INSERT INTO customers (name,phone,email,cpf) VALUES (?,?,?,?)').run(name, phone, email||null, cpf||null);
+  res.status(201).json({ id: r.lastInsertRowid });
 });
 
-router.patch('/customers/:id', (req, res) => {
+router.patch('/customers/:id', requireAdmin, (req, res) => {
   const { name, phone, email, cpf } = req.body;
-  const id = parseInt(req.params.id,10);
-  const current = db.prepare('SELECT * FROM customers WHERE id=?').get(id);
-  if (!current) return res.status(404).json({ error:'Cliente não encontrado' });
-  if (phone && phone !== current.phone && db.prepare('SELECT id FROM customers WHERE phone=? AND id!=?').get(phone,id)) return res.status(409).json({ error:'Telefone já cadastrado em outro cliente' });
-  db.prepare('UPDATE customers SET name=?,phone=?,email=?,cpf=? WHERE id=?').run(name||current.name,phone||current.phone,email??current.email,cpf??current.cpf,id);
-  res.json({ ok:true });
+  if (!name || !phone) return res.status(400).json({ error: 'Nome e telefone obrigatórios' });
+  db.prepare('UPDATE customers SET name=?,phone=?,email=?,cpf=? WHERE id=?').run(name, phone, email||null, cpf||null, req.params.id);
+  res.json({ ok: true });
 });
 
-router.delete('/customers/:id', (req, res) => {
-  const id = parseInt(req.params.id,10);
-  const orders = db.prepare('SELECT COUNT(*) as n FROM orders WHERE customer_id=?').get(id).n;
-  if (orders>0) return res.status(409).json({ error:`Este cliente possui ${orders} pedido(s) e não pode ser excluído.` });
-  db.prepare('DELETE FROM customers WHERE id=?').run(id);
-  res.json({ ok:true });
+router.delete('/customers/:id', requireAdmin, (req, res) => {
+  const refs = db.prepare('SELECT COUNT(*) as n FROM orders WHERE customer_id=?').get(req.params.id).n;
+  if (refs > 0) return res.status(409).json({ error: 'Cliente possui pedidos e não pode ser excluído.' });
+  db.prepare('DELETE FROM customers WHERE id=?').run(req.params.id);
+  res.json({ ok: true });
 });
 
 // ── Users ─────────────────────────────────────────────────────────────────────
-router.get('/users', requireAdmin, (req,res) => res.json(db.prepare('SELECT id,name,email,role,active,created_at FROM users ORDER BY id').all()));
-
-router.post('/users', requireAdmin, (req,res) => {
-  const { name, email, password, role } = req.body;
-  if (!name||!email||!password) return res.status(400).json({ error:'Dados incompletos' });
-  const r = db.prepare('INSERT INTO users (name,email,password,role) VALUES (?,?,?,?)').run(name,email,bcrypt.hashSync(password,10),role==='ADMIN'?'ADMIN':'VIEWER');
-  res.status(201).json({ id:r.lastInsertRowid });
+router.get('/users', requireAdmin, (req, res) => {
+  res.json(db.prepare('SELECT id,name,email,role,active FROM users ORDER BY id').all());
 });
 
-router.patch('/users/:id', requireAdmin, (req,res) => {
-  const { role, active } = req.body;
-  if (Number(req.params.id)===req.user.id) return res.status(400).json({ error:'Você não pode editar sua própria conta' });
-  const fields=[],params=[];
-  if (role!==undefined)   { fields.push('role=?');   params.push(role==='ADMIN'?'ADMIN':'VIEWER'); }
-  if (active!==undefined) { fields.push('active=?'); params.push(active?1:0); }
-  if (!fields.length) return res.status(400).json({ error:'Nada a atualizar' });
-  params.push(parseInt(req.params.id,10));
-  db.prepare(`UPDATE users SET ${fields.join(',')} WHERE id=?`).run(...params);
-  res.json({ ok:true });
+router.post('/users', requireAdmin, async (req, res) => {
+  const { name, email, password, role = 'VIEWER' } = req.body;
+  if (!name || !email || !password) return res.status(400).json({ error: 'Campos obrigatórios ausentes' });
+  const exists = db.prepare('SELECT id FROM users WHERE email=?').get(email);
+  if (exists) return res.status(409).json({ error: 'E-mail já cadastrado' });
+  const hash = await bcrypt.hash(password, 10);
+  const r = db.prepare('INSERT INTO users (name,email,password,role) VALUES (?,?,?,?)').run(name, email, hash, role);
+  res.status(201).json({ id: r.lastInsertRowid });
 });
 
-router.delete('/users/:id', requireAdmin, (req,res) => {
-  if (Number(req.params.id)===req.user.id) return res.status(400).json({ error:'Você não pode excluir sua própria conta' });
-  db.prepare('UPDATE users SET active=0 WHERE id=?').run(parseInt(req.params.id,10));
-  res.json({ ok:true });
+router.patch('/users/:id/role', requireAdmin, (req, res) => {
+  const { role } = req.body;
+  if (!['ADMIN','VIEWER'].includes(role)) return res.status(400).json({ error: 'Papel inválido' });
+  db.prepare('UPDATE users SET role=? WHERE id=?').run(role, req.params.id);
+  res.json({ ok: true });
+});
+
+router.patch('/users/:id/active', requireAdmin, (req, res) => {
+  db.prepare('UPDATE users SET active=? WHERE id=?').run(req.body.active ? 1 : 0, req.params.id);
+  res.json({ ok: true });
 });
 
 module.exports = router;
