@@ -10,7 +10,9 @@
 
 <header class="site-header">
   <div class="container header-inner">
-    <a href="/" class="site-logo">🛍️ MiniLoja</a>
+    <a href="/" class="site-logo">
+      <img src="/img/logo/logoipsum-3.png" alt="MiniLoja" style="height:36px;width:auto;display:block;">
+    </a>
     <nav class="header-nav">
       <a href="/track.html">Meus Pedidos</a>
       <button class="cart-btn" onclick="openDrawer()">
@@ -67,7 +69,6 @@
 
     grid.innerHTML = products.map(p => {
       const hasVariations = p.variations && p.variations.length > 0;
-      // Produto sem variações: usa o campo stock do próprio produto
       const semEstoque = !hasVariations && p.stock <= 0;
 
       return `
@@ -82,20 +83,17 @@
               <div class="size-selector" id="sizes-${p.id}">
                 ${p.variations.map(v => `
                   <button class="size-btn" data-pid="${p.id}" data-vid="${v.id}" data-label="${v.label}"
-                    ${v.stock <= 0 ? 'disabled title="Esgotado"' : ''}
-                    onclick="selectSize(this, ${p.id})">
-                    ${v.label}
-                  </button>
+                    ${v.stock <= 0 ? 'disabled style="opacity:.4;cursor:not-allowed"' : ''}
+                    onclick="selectSize(this)">${v.label}</button>
                 `).join('')}
               </div>
-              <button class="btn btn-dark btn-full" id="add-btn-${p.id}" onclick="handleAdd(${p.id})" disabled>
-                Adicionar ao Carrinho
+              <button class="btn btn-primary btn-full" onclick="addToCart(${p.id})" id="add-btn-${p.id}" disabled>
+                Selecione um tamanho
               </button>
             ` : `
-              <button class="btn btn-dark btn-full" id="add-btn-${p.id}"
-                onclick="handleAddSimple(${p.id})"
+              <button class="btn btn-primary btn-full" onclick="addToCart(${p.id})"
                 ${semEstoque ? 'disabled' : ''}>
-                ${semEstoque ? 'Esgotado' : 'Adicionar ao Carrinho'}
+                ${semEstoque ? 'Sem estoque' : 'Adicionar ao carrinho'}
               </button>
             `}
           </div>
@@ -104,49 +102,48 @@
     }).join('');
   }
 
-  function selectSize(btn, pid) {
+  function selectSize(btn) {
+    const pid = btn.dataset.pid;
     document.querySelectorAll(`#sizes-${pid} .size-btn`).forEach(b => b.classList.remove('selected'));
     btn.classList.add('selected');
-    document.getElementById(`add-btn-${pid}`).disabled = false;
+    const addBtn = document.getElementById(`add-btn-${pid}`);
+    addBtn.disabled = false;
+    addBtn.textContent = 'Adicionar ao carrinho';
   }
 
-  // Produto com variação: exige seleção antes de adicionar
-  function handleAdd(pid) {
-    const product = products.find(p => p.id === pid);
-    const selected = document.querySelector(`#sizes-${pid} .size-btn.selected`);
-    if (!selected) return;
+  function addToCart(pid) {
+    const p = products.find(x => x.id === pid);
+    if (!p) return;
+    const hasVariations = p.variations && p.variations.length > 0;
 
-    const variation = product.variations.find(v => v.id === Number(selected.dataset.vid));
-    addItem(product, variation);
-    openDrawer();
-    showToast(`${product.name} adicionado! ✓`);
-  }
-
-  // Produto sem variação: adiciona direto
-  function handleAddSimple(pid) {
-    const product = products.find(p => p.id === pid);
-    if (!product || product.stock <= 0) return;
-    addItem(product, null);
-    openDrawer();
-    showToast(`${product.name} adicionado! ✓`);
+    if (hasVariations) {
+      const selected = document.querySelector(`#sizes-${pid} .size-btn.selected`);
+      if (!selected) return;
+      addItem({ id: p.id, name: p.name, price: p.price, image: p.image_url,
+        variationId: Number(selected.dataset.vid), variationLabel: selected.dataset.label });
+    } else {
+      addItem({ id: p.id, name: p.name, price: p.price, image: p.image_url });
+    }
+    updateCartUI();
+    showToast(`${p.name} adicionado ao carrinho!`);
   }
 
   function fmt(val) {
     return new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(val);
   }
 
-  async function loadProducts() {
+  async function load() {
     try {
       const res = await fetch('/api/products');
       products = await res.json();
       renderProducts();
     } catch {
       document.getElementById('products-grid').innerHTML =
-        '<p style="color:var(--muted)">Erro ao carregar produtos.</p>';
+        '<p style="color:var(--danger)">Erro ao carregar produtos.</p>';
     }
   }
 
-  loadProducts();
+  load();
 </script>
 </body>
 </html>

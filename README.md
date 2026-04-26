@@ -1,4 +1,6 @@
-# 🛍️ MiniLoja — E-commerce Simples
+# MiniLoja — E-commerce Simples
+
+![MiniLoja](public/img/logo/logoipsum-3.png)
 
 Loja virtual completa com Node.js + Express + SQLite. **Sem Docker. Sem TypeScript. Sem frameworks de frontend.**
 
@@ -101,6 +103,9 @@ mini-loja/
     ├── success.html
     ├── track.html
     ├── css/style.css
+    ├── img/
+    │   └── logo/
+    │       └── logoipsum-3.png  ← Logo da aplicação
     ├── js/cart.js
     └── admin/
         ├── login.html
