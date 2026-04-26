@@ -147,7 +147,7 @@
               <button class="btn btn-primary btn-full" disabled style="margin-top:.75rem">Sem Estoque</button>
             ` : `
               <button class="btn btn-primary btn-full" style="margin-top:.75rem"
-                onclick="addToCart({productId:${p.id},productName:'${p.name.replace(/'/g,"\\'")}',price:${p.price},quantity:1});showToast('Adicionado ao carrinho!')">
+                onclick="addToCart({productId:${p.id},productName:'${p.name.replace(/'/g,"\\'")}',price:${p.price},quantity:1,image:'${(p.image_url||'').replace(/'/g,"\\'")}' });showToast('Adicionado ao carrinho!')"
                 Adicionar ao Carrinho
               </button>
             `}
@@ -163,25 +163,42 @@
   }
 
   function addWithVariation(pid, pname, price) {
-    const sel = document.querySelector(`#sizes-${pid} .size-btn.selected`);
-    if (!sel) { showToast('Selecione um tamanho!'); return; }
-    addToCart({
-      productId: pid, productName: pname, price,
-      variationId: Number(sel.dataset.vid), variationLabel: sel.dataset.label, quantity: 1,
-    });
-    showToast('Adicionado ao carrinho!');
-  }
+  const sel = document.querySelector(`#sizes-${pid} .size-btn.selected`);
+  if (!sel) { showToast('Selecione um tamanho!'); return; }
+  const prod = allProducts.find(p => p.id === pid);
+  addToCart({
+    productId:      pid,
+    productName:    pname,
+    price,
+    variationId:    Number(sel.dataset.vid),
+    variationLabel: sel.dataset.label,
+    quantity:       1,
+    image:          prod?.image_url || null,
+  });
+  showToast('Adicionado ao carrinho!');
+}
 
   // ── Init ──────────────────────────────────────────────────────────────────
   async function init() {
-    const [catRes, prodRes] = await Promise.all([
-      fetch('/api/categories'),
-      fetch('/api/products'),
-    ]);
-    allCategories = await catRes.json();
-    allProducts   = await prodRes.json();
-    renderCategoryFilter();
-    renderProducts();
+    const grid = document.getElementById('products-grid');
+    try {
+      const [catRes, prodRes] = await Promise.all([
+        fetch('/api/categories'),
+        fetch('/api/products'),
+      ]);
+
+      if (!catRes.ok || !prodRes.ok) {
+        throw new Error(`Erro na API: ${!catRes.ok ? catRes.status : prodRes.status}`);
+      }
+
+      allCategories = await catRes.json();
+      allProducts   = await prodRes.json();
+      renderCategoryFilter();
+      renderProducts();
+    } catch (err) {
+      console.error('Erro ao carregar produtos:', err);
+      grid.innerHTML = '<p style="color:var(--danger)">Erro ao carregar produtos. Verifique se o servidor está rodando.</p>';
+    }
   }
 
   init();

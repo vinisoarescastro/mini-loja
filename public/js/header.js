@@ -31,7 +31,8 @@ function renderHeader(opts = {}) {
       </button>`;
   }
 
-  root.outerHTML = `
+  // ✅ Usa insertAdjacentHTML para não perder a referência ao elemento
+  root.insertAdjacentHTML('afterend', `
     <header class="site-header">
       <div class="container header-inner">
         <a href="/" class="site-logo">
@@ -43,5 +44,9 @@ function renderHeader(opts = {}) {
         </a>
         <nav class="header-nav">${navHTML}</nav>
       </div>
-    </header>`;
+    </header>
+  `);
+
+  // Remove o placeholder vazio após injetar o header
+  root.remove();
 }

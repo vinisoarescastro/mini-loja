@@ -135,4 +135,16 @@ function closeDrawer() {
   document.getElementById('cart-overlay')?.classList.remove('open');
 }
 
+/**
+ * addToCart — wrapper para o formato flat usado no index.html
+ * Compatível com: addToCart({ productId, productName, price, quantity, variationId, variationLabel })
+ */
+function addToCart({ productId, productName, price, quantity = 1, variationId = null, variationLabel = null, image = null } = {}) {
+  addItem(
+    { id: productId, name: productName, price, variationId, variationLabel, image },
+    null,
+    quantity
+  );
+}
+
 document.addEventListener('DOMContentLoaded', updateCartUI);
