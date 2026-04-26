@@ -1,0 +1,163 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Produtos — Admin MiniLoja</title>
+  <link rel="stylesheet" href="/css/style.css">
+  <link rel="stylesheet" href="/admin/admin.css">
+</head>
+<body>
+<div class="admin-wrapper">
+  <div id="sidebar-root"></div>
+  <div class="admin-main">
+    <div class="admin-topbar">
+      <h1>Produtos</h1>
+      <button class="btn btn-primary" onclick="openModal()">+ Novo Produto</button>
+    </div>
+    <div class="admin-content">
+      <div class="table-wrap">
+        <div style="overflow-x:auto">
+          <table>
+            <thead><tr><th>Nome</th><th>Preço</th><th>Variações</th><th>Status</th><th></th></tr></thead>
+            <tbody id="products-body"></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Modal -->
+<div class="modal-overlay" id="modal" style="display:none">
+  <div class="modal" onclick="event.stopPropagation()">
+    <div class="modal-header">
+      <h2 id="modal-title">Novo Produto</h2>
+      <button class="modal-close" onclick="closeModal()">✕</button>
+    </div>
+    <div class="modal-body">
+      <input type="hidden" id="edit-id">
+      <div class="form-group"><label>Nome *</label><input type="text" id="edit-name" placeholder="Camiseta Básica"></div>
+      <div class="form-group"><label>Descrição</label><input type="text" id="edit-desc" placeholder="Algodão 100%…"></div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:1rem">
+        <div class="form-group"><label>Preço (R$) *</label><input type="number" id="edit-price" step="0.01" placeholder="59.90"></div>
+        <div class="form-group"><label>URL da Imagem</label><input type="url" id="edit-image" placeholder="https://…"></div>
+      </div>
+      <div id="active-row" class="form-group" style="display:none">
+        <label><input type="checkbox" id="edit-active" checked> Produto ativo</label>
+      </div>
+      <div>
+        <label style="font-size:.875rem;font-weight:500">Variações (tamanhos)</label>
+        <div id="variations-list" style="margin-top:.5rem"></div>
+        <button type="button" class="btn btn-secondary" style="margin-top:.4rem;font-size:.8rem" onclick="addVariation()">+ Adicionar variação</button>
+      </div>
+      <div class="form-error" id="err-modal" style="margin-top:.5rem"></div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-secondary" onclick="closeModal()">Cancelar</button>
+      <button class="btn btn-primary" onclick="saveProduct()">Salvar</button>
+    </div>
+  </div>
+</div>
+
+<script src="/admin/js/admin.js"></script>
+<script src="/admin/js/sidebar.js"></script>
+<script>
+  document.getElementById('sidebar-root').innerHTML = sidebarHTML();
+  let products = [];
+
+  async function loadProducts() {
+    const res = await fetch('/api/products');
+    const all = await res.json();
+    // also fetch inactive
+    products = all;
+    const tbody = document.getElementById('products-body');
+    tbody.innerHTML = products.map(p => `
+      <tr>
+        <td><strong>${p.name}</strong><br><span style="font-size:.8rem;color:#94a3b8">${p.description||''}</span></td>
+        <td>${fmt(p.price)}</td>
+        <td>${p.variations.map(v=>v.label).join(', ')||'—'}</td>
+        <td><span class="badge ${p.active?'badge-approved':'badge-rejected'}">${p.active?'Ativo':'Inativo'}</span></td>
+        <td style="display:flex;gap:.4rem">
+          <button class="btn btn-secondary" style="padding:.3rem .75rem;font-size:.8rem" onclick="editProduct(${p.id})">Editar</button>
+          <button class="btn btn-danger" style="padding:.3rem .75rem;font-size:.8rem" onclick="deleteProduct(${p.id})">Excluir</button>
+        </td>
+      </tr>
+    `).join('') || `<tr><td colspan="5" class="table-empty">Nenhum produto</td></tr>`;
+  }
+
+  function addVariation(label = '', stock = 0) {
+    const div = document.createElement('div');
+    div.className = 'variation-row';
+    div.innerHTML = `
+      <input type="text" placeholder="Tamanho (ex: M)" value="${label}" style="max-width:120px">
+      <input type="number" placeholder="Estoque" value="${stock}" min="0" style="max-width:90px">
+      <button type="button" onclick="this.parentElement.remove()" style="background:none;border:none;color:var(--danger);font-size:1.1rem;cursor:pointer">✕</button>
+    `;
+    document.getElementById('variations-list').appendChild(div);
+  }
+
+  function openModal(product = null) {
+    document.getElementById('edit-id').value   = product?.id || '';
+    document.getElementById('edit-name').value = product?.name || '';
+    document.getElementById('edit-desc').value = product?.description || '';
+    document.getElementById('edit-price').value= product?.price || '';
+    document.getElementById('edit-image').value= product?.image_url || '';
+    document.getElementById('edit-active').checked = product ? !!product.active : true;
+    document.getElementById('active-row').style.display = product ? 'block' : 'none';
+    document.getElementById('modal-title').textContent = product ? 'Editar Produto' : 'Novo Produto';
+    document.getElementById('err-modal').textContent = '';
+    document.getElementById('variations-list').innerHTML = '';
+    if (product?.variations?.length) product.variations.forEach(v => addVariation(v.label, v.stock));
+    else addVariation();
+    document.getElementById('modal').style.display = 'flex';
+  }
+
+  function editProduct(id) {
+    const p = products.find(p => p.id === id);
+    if (p) openModal(p);
+  }
+
+  async function deleteProduct(id) {
+    if (!confirm('Excluir este produto?')) return;
+    await fetch(`/api/products/${id}`, { method: 'DELETE' });
+    loadProducts();
+  }
+
+  async function saveProduct() {
+    const id    = document.getElementById('edit-id').value;
+    const name  = document.getElementById('edit-name').value.trim();
+    const price = parseFloat(document.getElementById('edit-price').value);
+    const err   = document.getElementById('err-modal');
+    err.textContent = '';
+
+    if (!name || isNaN(price)) { err.textContent = 'Nome e preço são obrigatórios.'; return; }
+
+    const variations = [...document.querySelectorAll('#variations-list .variation-row')].map(row => {
+      const [lInput, sInput] = row.querySelectorAll('input');
+      return { label: lInput.value.trim(), stock: parseInt(sInput.value) || 0 };
+    }).filter(v => v.label);
+
+    const body = {
+      name, price,
+      description: document.getElementById('edit-desc').value || null,
+      image_url: document.getElementById('edit-image').value || null,
+      active: document.getElementById('edit-active').checked,
+      variations,
+    };
+
+    const method = id ? 'PUT' : 'POST';
+    const url    = id ? `/api/products/${id}` : '/api/products';
+    const res = await fetch(url, { method, headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
+
+    if (!res.ok) { err.textContent = 'Erro ao salvar.'; return; }
+    closeModal();
+    loadProducts();
+  }
+
+  function closeModal() { document.getElementById('modal').style.display = 'none'; }
+
+  requireAdmin().then(loadProducts);
+</script>
+</body>
+</html>

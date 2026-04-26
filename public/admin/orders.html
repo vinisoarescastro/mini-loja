@@ -1,0 +1,183 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Pedidos — Admin MiniLoja</title>
+  <link rel="stylesheet" href="/css/style.css">
+  <link rel="stylesheet" href="/admin/admin.css">
+</head>
+<body>
+<div class="admin-wrapper">
+  <div id="sidebar-root"></div>
+
+  <div class="admin-main">
+    <div class="admin-topbar"><h1>Pedidos</h1></div>
+    <div class="admin-content">
+      <div class="table-wrap">
+        <div class="table-header">
+          <div class="filters">
+            <input type="text" id="f-search" placeholder="Buscar código, cliente…" oninput="debounceLoad()">
+            <select id="f-pay" onchange="loadOrders()">
+              <option value="">Todos pagamentos</option>
+              <option value="PENDING">Aguardando</option>
+              <option value="APPROVED">Aprovado</option>
+              <option value="REJECTED">Recusado</option>
+            </select>
+            <select id="f-order" onchange="loadOrders()">
+              <option value="">Todos status</option>
+              <option value="PENDING">Pendente</option>
+              <option value="CONFIRMED">Confirmado</option>
+              <option value="PREPARING">Preparando</option>
+              <option value="SHIPPED">Enviado</option>
+              <option value="DELIVERED">Entregue</option>
+              <option value="CANCELLED">Cancelado</option>
+            </select>
+          </div>
+        </div>
+        <div style="overflow-x:auto">
+          <table>
+            <thead><tr>
+              <th>Código</th><th>Cliente</th><th>Telefone</th><th>Total</th>
+              <th>Pagamento</th><th>Status</th><th>Data</th><th></th>
+            </tr></thead>
+            <tbody id="orders-body"></tbody>
+          </table>
+        </div>
+        <div class="pagination" id="pagination"></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Modal -->
+<div class="modal-overlay" id="modal" style="display:none" onclick="e=>e.target===this&&closeModal()">
+  <div class="modal" onclick="event.stopPropagation()">
+    <div class="modal-header">
+      <h2 id="modal-title">Pedido</h2>
+      <button class="modal-close" onclick="closeModal()">✕</button>
+    </div>
+    <div class="modal-body" id="modal-body"></div>
+    <div class="modal-footer">
+      <button class="btn btn-secondary" onclick="closeModal()">Fechar</button>
+      <button class="btn btn-primary" onclick="saveOrder()">Salvar</button>
+    </div>
+  </div>
+</div>
+
+<script src="/admin/js/admin.js"></script>
+<script src="/admin/js/sidebar.js"></script>
+<script>
+  document.getElementById('sidebar-root').innerHTML = sidebarHTML();
+
+  let currentPage = 1;
+  let currentOrderId = null;
+  let debounceTimer;
+
+  function debounceLoad() {
+    clearTimeout(debounceTimer);
+    debounceTimer = setTimeout(loadOrders, 400);
+  }
+
+  async function loadOrders(page = 1) {
+    currentPage = page;
+    const params = new URLSearchParams({
+      page,
+      search: document.getElementById('f-search').value,
+      paymentStatus: document.getElementById('f-pay').value,
+      orderStatus: document.getElementById('f-order').value,
+    });
+    const res = await fetch(`/api/admin/orders?${params}`);
+    const data = await res.json();
+
+    const tbody = document.getElementById('orders-body');
+    tbody.innerHTML = data.orders.map(o => `
+      <tr>
+        <td><strong>${o.code}</strong></td>
+        <td>${o.customer_name}</td>
+        <td>${o.customer_phone}</td>
+        <td>${fmt(o.total)}</td>
+        <td><span class="${badgeClass(o.payment_status)}">${PAY_LABEL[o.payment_status]||o.payment_status}</span></td>
+        <td><span class="${badgeClass(o.order_status)}">${STATUS_LABEL[o.order_status]||o.order_status}</span></td>
+        <td>${fmtDate(o.created_at)}</td>
+        <td><button class="btn btn-secondary" style="padding:.3rem .75rem;font-size:.8rem" onclick="openOrder(${o.id})">Detalhes</button></td>
+      </tr>
+    `).join('') || `<tr><td colspan="8" class="table-empty">Nenhum pedido encontrado</td></tr>`;
+
+    // Pagination
+    const pag = document.getElementById('pagination');
+    pag.innerHTML = '';
+    for (let i = 1; i <= data.pages; i++) {
+      const btn = document.createElement('button');
+      btn.className = 'page-btn' + (i === page ? ' active' : '');
+      btn.textContent = i;
+      btn.onclick = () => loadOrders(i);
+      pag.appendChild(btn);
+    }
+  }
+
+  async function openOrder(id) {
+    currentOrderId = id;
+    const res = await fetch(`/api/admin/orders/${id}`);
+    const o = await res.json();
+    document.getElementById('modal-title').textContent = `Pedido ${o.code}`;
+    document.getElementById('modal-body').innerHTML = `
+      <p style="margin-bottom:.75rem;font-size:.875rem;color:#64748b">${fmtDate(o.created_at)}</p>
+      <p><strong>Cliente:</strong> ${o.customer_name}</p>
+      <p><strong>Telefone:</strong> ${o.customer_phone}</p>
+      ${o.customer_email ? `<p><strong>E-mail:</strong> ${o.customer_email}</p>` : ''}
+
+      <hr style="margin:1rem 0;border:none;border-top:1px solid #e2e8f0">
+      <strong>Itens:</strong>
+      <table style="width:100%;margin-top:.5rem;font-size:.875rem">
+        ${o.items.map(i => `
+          <tr>
+            <td>${i.product_name}${i.variation_label ? ` (${i.variation_label})` : ''}</td>
+            <td style="text-align:center">× ${i.quantity}</td>
+            <td style="text-align:right">${fmt(i.unit_price * i.quantity)}</td>
+          </tr>
+        `).join('')}
+        <tr><td colspan="2"><strong>Total</strong></td><td style="text-align:right"><strong>${fmt(o.total)}</strong></td></tr>
+      </table>
+
+      <hr style="margin:1rem 0;border:none;border-top:1px solid #e2e8f0">
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:1rem">
+        <div class="form-group" style="margin:0">
+          <label>Status do Pedido</label>
+          <select id="edit-order-status">
+            ${['PENDING','CONFIRMED','PREPARING','SHIPPED','DELIVERED','CANCELLED'].map(s =>
+              `<option value="${s}"${o.order_status===s?' selected':''}>${STATUS_LABEL[s]}</option>`
+            ).join('')}
+          </select>
+        </div>
+        <div class="form-group" style="margin:0">
+          <label>Status do Pagamento</label>
+          <select id="edit-payment-status">
+            ${['PENDING','APPROVED','REJECTED','REFUNDED','CANCELLED'].map(s =>
+              `<option value="${s}"${o.payment_status===s?' selected':''}>${PAY_LABEL[s]}</option>`
+            ).join('')}
+          </select>
+        </div>
+      </div>
+    `;
+    document.getElementById('modal').style.display = 'flex';
+  }
+
+  async function saveOrder() {
+    const orderStatus   = document.getElementById('edit-order-status').value;
+    const paymentStatus = document.getElementById('edit-payment-status').value;
+    await fetch(`/api/admin/orders/${currentOrderId}`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ orderStatus, paymentStatus }),
+    });
+    closeModal();
+    loadOrders(currentPage);
+  }
+
+  function closeModal() { document.getElementById('modal').style.display = 'none'; }
+
+  requireAdmin().then(loadOrders);
+</script>
+</body>
+</html>

@@ -1,0 +1,86 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Dashboard — Admin MiniLoja</title>
+  <link rel="stylesheet" href="/css/style.css">
+  <link rel="stylesheet" href="/admin/admin.css">
+</head>
+<body>
+<div class="admin-wrapper">
+  <div id="sidebar-root"></div>
+
+  <div class="admin-main">
+    <div class="admin-topbar">
+      <h1>Dashboard</h1>
+    </div>
+    <div class="admin-content">
+      <!-- Stats -->
+      <div class="stats-grid" id="stats-grid">
+        <div class="stat-card"><div class="stat-label">Pedidos</div><div class="stat-value" id="s-orders">—</div></div>
+        <div class="stat-card"><div class="stat-label">Receita Bruta</div><div class="stat-value" id="s-gross">—</div></div>
+        <div class="stat-card"><div class="stat-label">Receita Aprovada</div><div class="stat-value" id="s-approved">—</div></div>
+      </div>
+
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:1rem;align-items:start">
+        <!-- Recent orders -->
+        <div class="table-wrap">
+          <div class="table-header"><strong>Pedidos Recentes</strong></div>
+          <table>
+            <thead><tr>
+              <th>Código</th><th>Cliente</th><th>Total</th><th>Pagamento</th>
+            </tr></thead>
+            <tbody id="recent-orders-body"></tbody>
+          </table>
+        </div>
+
+        <!-- Product breakdown -->
+        <div class="table-wrap" style="padding:1.25rem">
+          <strong>Vendas por Produto</strong>
+          <div class="bar-chart" id="bar-chart"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script src="/admin/js/admin.js"></script>
+<script src="/admin/js/sidebar.js"></script>
+<script>
+  document.getElementById('sidebar-root').innerHTML = sidebarHTML();
+
+  async function load() {
+    await requireAdmin();
+    const res = await fetch('/api/admin/dashboard');
+    if (!res.ok) return;
+    const d = await res.json();
+
+    document.getElementById('s-orders').textContent   = d.totalOrders;
+    document.getElementById('s-gross').textContent    = fmt(d.totalGross);
+    document.getElementById('s-approved').textContent = fmt(d.totalApproved);
+
+    const tbody = document.getElementById('recent-orders-body');
+    tbody.innerHTML = d.recentOrders.map(o => `
+      <tr>
+        <td><a href="/admin/orders.html" style="color:var(--accent)">${o.code}</a></td>
+        <td>${o.customer_name}</td>
+        <td>${fmt(o.total)}</td>
+        <td><span class="${badgeClass(o.payment_status)}">${PAY_LABEL[o.payment_status]||o.payment_status}</span></td>
+      </tr>
+    `).join('') || `<tr><td colspan="4" class="table-empty">Nenhum pedido ainda</td></tr>`;
+
+    const maxRevenue = Math.max(...d.productBreakdown.map(p => p.revenue), 1);
+    document.getElementById('bar-chart').innerHTML = d.productBreakdown.map(p => `
+      <div class="bar-row">
+        <span class="bar-label" title="${p.product_name}">${p.product_name}</span>
+        <div class="bar-track"><div class="bar-fill" style="width:${(p.revenue/maxRevenue*100).toFixed(1)}%"></div></div>
+        <span class="bar-value">${fmt(p.revenue)}</span>
+      </div>
+    `).join('') || '<p style="color:#94a3b8;font-size:.875rem;margin-top:.5rem">Sem dados ainda</p>';
+  }
+
+  load();
+</script>
+</body>
+</html>

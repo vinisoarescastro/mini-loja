@@ -1,0 +1,78 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Clientes — Admin MiniLoja</title>
+  <link rel="stylesheet" href="/css/style.css">
+  <link rel="stylesheet" href="/admin/admin.css">
+</head>
+<body>
+<div class="admin-wrapper">
+  <div id="sidebar-root"></div>
+  <div class="admin-main">
+    <div class="admin-topbar"><h1>Clientes</h1></div>
+    <div class="admin-content">
+      <div class="table-wrap">
+        <div class="table-header">
+          <div class="filters">
+            <input type="text" id="f-search" placeholder="Buscar nome ou telefone…" oninput="debounceLoad()">
+          </div>
+        </div>
+        <div style="overflow-x:auto">
+          <table>
+            <thead><tr>
+              <th>Nome</th><th>Telefone</th><th>E-mail</th>
+              <th>Pedidos</th><th>Total Gasto</th><th>Último Pedido</th>
+            </tr></thead>
+            <tbody id="customers-body"></tbody>
+          </table>
+        </div>
+        <div class="pagination" id="pagination"></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script src="/admin/js/admin.js"></script>
+<script src="/admin/js/sidebar.js"></script>
+<script>
+  document.getElementById('sidebar-root').innerHTML = sidebarHTML();
+  let debounceTimer;
+
+  function debounceLoad() {
+    clearTimeout(debounceTimer);
+    debounceTimer = setTimeout(() => loadCustomers(1), 400);
+  }
+
+  async function loadCustomers(page = 1) {
+    const params = new URLSearchParams({ page, search: document.getElementById('f-search').value });
+    const res = await fetch(`/api/admin/customers?${params}`);
+    const data = await res.json();
+
+    document.getElementById('customers-body').innerHTML = data.customers.map(c => `
+      <tr>
+        <td><strong>${c.name}</strong></td>
+        <td>${c.phone}</td>
+        <td>${c.email || '—'}</td>
+        <td>${c.total_orders}</td>
+        <td>${fmt(c.total_spent)}</td>
+        <td>${fmtDate(c.last_order)}</td>
+      </tr>
+    `).join('') || `<tr><td colspan="6" class="table-empty">Nenhum cliente</td></tr>`;
+
+    const pag = document.getElementById('pagination');
+    pag.innerHTML = '';
+    for (let i = 1; i <= data.pages; i++) {
+      const btn = document.createElement('button');
+      btn.className = 'page-btn' + (i === page ? ' active' : '');
+      btn.textContent = i;
+      btn.onclick = () => loadCustomers(i);
+      pag.appendChild(btn);
+    }
+  }
+
+  requireAdmin().then(() => loadCustomers());
+</script>
+</body>
+</html>
