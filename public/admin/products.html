@@ -7,70 +7,9 @@
   <link rel="stylesheet" href="/css/style.css">
   <link rel="stylesheet" href="/admin/admin.css">
   <style>
-    /* ── Image Uploader ─────────────────────────────────────────────────── */
-    .img-uploader {
-      border: 2px dashed #cbd5e1;
-      border-radius: 10px;
-      padding: 1rem;
-      background: #f8fafc;
-      transition: border-color .2s, background .2s;
-      cursor: pointer;
-    }
-    .img-uploader.drag-over { border-color: var(--accent, #6366f1); background: #eef2ff; }
-    .img-grid { display: flex; flex-wrap: wrap; gap: .5rem; margin-bottom: .6rem; }
-    .img-thumb {
-      position: relative; width: 76px; height: 76px;
-      border-radius: 8px; overflow: hidden;
-      border: 2px solid #e2e8f0; flex-shrink: 0; background: #f1f5f9;
-    }
-    .img-thumb img { width: 100%; height: 100%; object-fit: cover; display: block; }
-    .img-thumb-remove {
-      position: absolute; top: 3px; right: 3px;
-      width: 20px; height: 20px;
-      background: rgba(0,0,0,.6); color: #fff;
-      border: none; border-radius: 50%;
-      font-size: 11px; line-height: 1; cursor: pointer;
-      display: flex; align-items: center; justify-content: center; padding: 0;
-    }
-    .img-thumb-badge {
-      position: absolute; bottom: 3px; left: 3px;
-      background: rgba(99,102,241,.85); color: #fff;
-      font-size: 9px; font-weight: 700;
-      padding: 1px 5px; border-radius: 4px;
-    }
-    .img-add-tile {
-      display: flex; flex-direction: column;
-      align-items: center; justify-content: center;
-      width: 76px; height: 76px;
-      border: 2px dashed #cbd5e1; border-radius: 8px;
-      cursor: pointer; color: #94a3b8;
-      font-size: .68rem; gap: 3px; background: #fff;
-      transition: border-color .15s, color .15s; flex-shrink: 0; user-select: none;
-    }
-    .img-add-tile:hover { border-color: var(--accent, #6366f1); color: var(--accent, #6366f1); }
-    .img-add-tile-icon { font-size: 1.3rem; line-height: 1; }
-    .img-hint { font-size: .75rem; color: #94a3b8; text-align: center; padding: .25rem 0 .1rem; }
-    .img-count { font-weight: 600; color: #475569; }
-    .img-count.at-limit { color: #ef4444; }
-
-    /* ── Encomenda ──────────────────────────────────────────────────────── */
-    .preorder-box {
-      background: #fffbeb;
-      border: 1px solid #fde68a;
-      border-radius: 8px;
-      padding: .75rem 1rem;
-      margin-top: .5rem;
-    }
-    .badge-mto {
-      display: inline-block;
-      background: #f59e0b; color: #fff;
-      font-size: .7rem; font-weight: 700;
-      padding: 2px 7px; border-radius: 99px;
-      text-transform: uppercase; letter-spacing: .04em;
-      margin-left: .4rem;
-    }
-
-    /* ── Tabela produto ─────────────────────────────────────────────────── */
+    /* ═══════════════════════════════════════════════════════
+       TABELA DE PRODUTOS
+    ═══════════════════════════════════════════════════════ */
     .product-thumb {
       width: 44px; height: 44px; object-fit: cover;
       border-radius: 6px; border: 1px solid #e2e8f0; display: block;
@@ -80,22 +19,24 @@
       background: #f1f5f9; border: 1px solid #e2e8f0;
       display: flex; align-items: center; justify-content: center; color: #94a3b8;
     }
-    .product-thumb-placeholder svg { width: 20px; height: 20px; }
-
     .stock-btn {
       background: none; border: none; cursor: pointer;
       display: inline-flex; align-items: center; gap: .3rem;
       font-size: .85rem; padding: .15rem .3rem; border-radius: 4px;
-      transition: background .15s;
+      transition: background .15s; color: #64748b; flex-shrink: 0;
     }
     .stock-btn:hover { background: #f1f5f9; }
     .stock-btn svg { width: 13px; height: 13px; color: #64748b; flex-shrink: 0; }
     .stock-btn.warn { color: var(--danger); font-weight: 600; }
     .stock-btn.warn svg { color: var(--danger); }
-
     .action-cell { display: flex; gap: .35rem; align-items: center; }
     .action-cell button { display: inline-flex; align-items: center; gap: .3rem; font-size: .8rem; padding: .3rem .65rem; }
     .action-cell button svg { width: 13px; height: 13px; }
+    .badge-mto {
+      display: inline-block; background: #f59e0b; color: #fff;
+      font-size: .7rem; font-weight: 700; padding: 2px 7px;
+      border-radius: 99px; text-transform: uppercase; letter-spacing: .04em; margin-left: .4rem;
+    }
 
     /* ── Modal estoque por variação ─────────────────────────────────────── */
     #stock-modal .modal { max-width: 440px; }
@@ -103,16 +44,186 @@
     .var-sales-table th { text-align: left; font-size: .75rem; color: #64748b; font-weight: 600; text-transform: uppercase; letter-spacing: .04em; padding: .4rem .5rem; border-bottom: 1px solid #e2e8f0; }
     .var-sales-table td { padding: .5rem .5rem; border-bottom: 1px solid #f1f5f9; }
     .var-sales-table tr:last-child td { border-bottom: none; font-weight: 700; }
-    .sold-chip {
-      display: inline-block; background: #dcfce7; color: #16a34a;
-      font-size: .75rem; font-weight: 700;
-      padding: 1px 7px; border-radius: 99px;
+    .sold-chip { display: inline-block; background: #dcfce7; color: #16a34a; font-size: .75rem; font-weight: 700; padding: 1px 7px; border-radius: 99px; }
+
+    /* ═══════════════════════════════════════════════════════
+       MODAL DE PRODUTO — REDESIGN MODERNO
+    ═══════════════════════════════════════════════════════ */
+    #modal .modal {
+      max-width: 680px;
+      width: 95vw;
+      max-height: 92vh;
+      display: flex;
+      flex-direction: column;
+    }
+    #modal .modal-body {
+      overflow-y: auto;
+      flex: 1;
+      padding: 0;
+    }
+
+    /* Seções dentro do modal */
+    .modal-section {
+      padding: 1.25rem 1.5rem;
+      border-bottom: 1px solid #f1f5f9;
+    }
+    .modal-section:last-child { border-bottom: none; }
+    .modal-section-title {
+      font-size: .7rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: .08em;
+      color: #94a3b8;
+      margin-bottom: 1rem;
+      display: flex;
+      align-items: center;
+      gap: .4rem;
+    }
+    .modal-section-title svg { width: 13px; height: 13px; }
+
+    /* Grid de 2 colunas */
+    .form-grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: .85rem; }
+
+    /* ── Image Uploader ──────────────────────────────────────────────────── */
+    .img-uploader {
+      border: 2px dashed #cbd5e1; border-radius: 10px;
+      padding: .85rem 1rem; background: #f8fafc;
+      transition: border-color .2s, background .2s; cursor: pointer;
+    }
+    .img-uploader.drag-over { border-color: var(--accent, #6366f1); background: #eef2ff; }
+    .img-grid { display: flex; flex-wrap: wrap; gap: .5rem; margin-bottom: .55rem; }
+    .img-thumb {
+      position: relative; width: 72px; height: 72px;
+      border-radius: 8px; overflow: hidden;
+      border: 2px solid #e2e8f0; flex-shrink: 0; background: #f1f5f9;
+    }
+    .img-thumb img { width: 100%; height: 100%; object-fit: cover; display: block; }
+    .img-thumb-remove {
+      position: absolute; top: 3px; right: 3px;
+      width: 20px; height: 20px; background: rgba(0,0,0,.62); color: #fff;
+      border: none; border-radius: 50%; font-size: 11px; cursor: pointer;
+      display: flex; align-items: center; justify-content: center; padding: 0;
+    }
+    .img-thumb-badge {
+      position: absolute; bottom: 3px; left: 3px;
+      background: rgba(99,102,241,.85); color: #fff;
+      font-size: 9px; font-weight: 700; padding: 1px 5px; border-radius: 4px;
+    }
+    .img-add-tile {
+      display: flex; flex-direction: column; align-items: center; justify-content: center;
+      width: 72px; height: 72px; border: 2px dashed #cbd5e1; border-radius: 8px;
+      cursor: pointer; color: #94a3b8; font-size: .65rem; gap: 3px;
+      background: #fff; transition: border-color .15s, color .15s; flex-shrink: 0;
+    }
+    .img-add-tile:hover { border-color: var(--accent, #6366f1); color: var(--accent, #6366f1); }
+    .img-add-tile-icon { font-size: 1.25rem; line-height: 1; }
+    .img-hint { font-size: .73rem; color: #94a3b8; text-align: center; padding: .15rem 0 0; }
+    .img-count { font-weight: 600; color: #475569; }
+    .img-count.at-limit { color: #ef4444; }
+
+    /* ── Estoque / Disponibilidade ────────────────────────────────────────── */
+    .stock-toggle-group {
+      display: grid; grid-template-columns: 1fr 1fr; gap: .6rem; margin-bottom: .85rem;
+    }
+    .stock-option {
+      border: 2px solid #e2e8f0; border-radius: 10px;
+      padding: .75rem 1rem; cursor: pointer;
+      transition: border-color .18s, background .18s;
+      display: flex; gap: .65rem; align-items: flex-start;
+    }
+    .stock-option input[type="radio"] { display: none; }
+    .stock-option.selected {
+      border-color: var(--accent, #6366f1);
+      background: #eef2ff;
+    }
+    .stock-option-icon {
+      width: 32px; height: 32px; border-radius: 8px;
+      display: flex; align-items: center; justify-content: center;
+      background: #f1f5f9; flex-shrink: 0;
+    }
+    .stock-option.selected .stock-option-icon { background: #c7d2fe; }
+    .stock-option-icon svg { width: 16px; height: 16px; color: #64748b; }
+    .stock-option.selected .stock-option-icon svg { color: #4338ca; }
+    .stock-option-label { font-size: .85rem; font-weight: 600; color: #334155; line-height: 1.3; }
+    .stock-option-sub { font-size: .73rem; color: #94a3b8; margin-top: .1rem; }
+
+    .stock-qty-box {
+      background: #f8fafc; border: 1px solid #e2e8f0;
+      border-radius: 8px; padding: .75rem 1rem; margin-top: .1rem;
+    }
+
+    .mto-box {
+      background: #fffbeb; border: 1px solid #fde68a;
+      border-radius: 8px; padding: .75rem 1rem; margin-top: .1rem;
+    }
+    .mto-box-label { font-size: .8rem; color: #92400e; display: flex; align-items: center; gap: .4rem; margin-bottom: .6rem; font-weight: 600; }
+
+    /* ── Variações ────────────────────────────────────────────────────────── */
+    .variations-toggle {
+      display: flex; align-items: center; gap: .5rem;
+      cursor: pointer; user-select: none; font-size: .88rem;
+      font-weight: 600; color: #334155;
+    }
+    .toggle-switch {
+      position: relative; width: 36px; height: 20px; flex-shrink: 0;
+    }
+    .toggle-switch input { display: none; }
+    .toggle-slider {
+      position: absolute; inset: 0; background: #cbd5e1;
+      border-radius: 20px; transition: background .2s;
+    }
+    .toggle-slider::before {
+      content: ''; position: absolute; width: 14px; height: 14px;
+      border-radius: 50%; background: #fff; top: 3px; left: 3px;
+      transition: transform .2s; box-shadow: 0 1px 3px rgba(0,0,0,.2);
+    }
+    .toggle-switch input:checked + .toggle-slider { background: var(--accent, #6366f1); }
+    .toggle-switch input:checked + .toggle-slider::before { transform: translateX(16px); }
+
+    .variation-row {
+      display: grid; grid-template-columns: 1fr 100px 28px;
+      gap: .5rem; align-items: center; margin-bottom: .45rem;
+    }
+    .variation-row input[type="text"] { font-size: .875rem; }
+    .variation-row input[type="number"] { font-size: .875rem; text-align: center; }
+    .var-remove-btn {
+      background: none; border: none; color: #94a3b8;
+      cursor: pointer; display: flex; align-items: center; justify-content: center;
+      padding: 0; border-radius: 4px; transition: color .15s;
+    }
+    .var-remove-btn:hover { color: var(--danger); }
+    .var-remove-btn svg { width: 15px; height: 15px; }
+    .var-add-btn {
+      background: none; border: 1px dashed #cbd5e1; border-radius: 7px;
+      padding: .45rem .75rem; font-size: .82rem; color: #64748b;
+      cursor: pointer; width: 100%; text-align: left;
+      transition: border-color .15s, color .15s; margin-top: .25rem;
+    }
+    .var-add-btn:hover { border-color: var(--accent, #6366f1); color: var(--accent, #6366f1); }
+    .var-header { display: grid; grid-template-columns: 1fr 100px 28px; gap: .5rem; margin-bottom: .3rem; }
+    .var-header span { font-size: .7rem; font-weight: 600; color: #94a3b8; text-transform: uppercase; letter-spacing: .05em; }
+
+    /* ── Configurações (ativo) ────────────────────────────────────────────── */
+    .config-row {
+      display: flex; align-items: center; justify-content: space-between;
+      padding: .5rem 0;
+    }
+    .config-row-label { font-size: .875rem; font-weight: 500; color: #334155; }
+    .config-row-sub { font-size: .75rem; color: #94a3b8; margin-top: .05rem; }
+
+    /* ── Footer ──────────────────────────────────────────────────────────── */
+    .modal-footer {
+      padding: 1rem 1.5rem;
+      border-top: 1px solid #f1f5f9;
+      background: #fafafa;
+      display: flex; justify-content: flex-end; gap: .6rem;
     }
   </style>
 </head>
 <body>
 <div class="admin-wrapper">
   <div id="sidebar-root"></div>
+
   <div class="admin-main">
     <div class="admin-topbar">
       <h1>Produtos</h1>
@@ -140,48 +251,70 @@
   </div>
 </div>
 
-<!-- ── Modal editar / criar produto ──────────────────────────────────────── -->
-<div class="modal-overlay" id="modal" style="display:none">
+<!-- ══════════════════════════════════════════════════════════════════════════
+     MODAL — PRODUTO (REDESENHADO)
+══════════════════════════════════════════════════════════════════════════ -->
+<div class="modal-overlay" id="modal" style="display:none" onclick="if(event.target===this)closeModal()">
   <div class="modal" onclick="event.stopPropagation()">
-    <div class="modal-header">
-      <h2 id="modal-title">Novo Produto</h2>
+
+    <!-- Header -->
+    <div class="modal-header" style="padding:1.1rem 1.5rem;border-bottom:1px solid #f1f5f9">
+      <h2 id="modal-title" style="font-size:1.1rem">Novo Produto</h2>
       <button class="modal-close" onclick="closeModal()">
         <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="width:18px;height:18px">
           <line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>
         </svg>
       </button>
     </div>
+
+    <!-- Body scrollável -->
     <div class="modal-body">
       <input type="hidden" id="edit-id">
 
-      <div class="form-group">
-        <label>Nome *</label>
-        <input type="text" id="edit-name" placeholder="Camiseta Básica">
-      </div>
-      <div class="form-group">
-        <label>Descrição</label>
-        <input type="text" id="edit-desc" placeholder="Algodão 100%…">
+      <!-- ① Informações Básicas -->
+      <div class="modal-section">
+        <div class="modal-section-title">
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+          Informações Básicas
+        </div>
+
+        <div class="form-group" style="margin-bottom:.75rem">
+          <label style="font-size:.82rem;font-weight:600;color:#475569">Nome do produto <span style="color:var(--danger)">*</span></label>
+          <input type="text" id="edit-name" placeholder="Ex: Camiseta Básica Premium">
+        </div>
+
+        <div class="form-group" style="margin-bottom:.75rem">
+          <label style="font-size:.82rem;font-weight:600;color:#475569">Descrição <span style="color:var(--danger)">*</span></label>
+          <textarea id="edit-desc" rows="2" placeholder="Descreva o produto brevemente…"
+            style="resize:vertical;min-height:64px;font-family:inherit;font-size:.9rem;
+                   padding:.55rem .75rem;border:1px solid #e2e8f0;border-radius:7px;
+                   width:100%;box-sizing:border-box;line-height:1.5;color:#1e293b;background:#fff"></textarea>
+        </div>
+
+        <div class="form-grid-2">
+          <div class="form-group" style="margin:0">
+            <label style="font-size:.82rem;font-weight:600;color:#475569">Preço (R$) <span style="color:var(--danger)">*</span></label>
+            <input type="number" id="edit-price" step="0.01" min="0" placeholder="0,00">
+          </div>
+          <div class="form-group" style="margin:0">
+            <label style="font-size:.82rem;font-weight:600;color:#475569">Categoria <span style="color:var(--danger)">*</span></label>
+            <select id="edit-category">
+              <option value="">— Selecione —</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="form-error" id="err-modal" style="margin-top:.5rem"></div>
       </div>
 
-      <div style="display:grid;grid-template-columns:1fr 1fr;gap:1rem">
-        <div class="form-group">
-          <label>Preço (R$) *</label>
-          <input type="number" id="edit-price" step="0.01" placeholder="59.90">
+      <!-- ② Imagens -->
+      <div class="modal-section">
+        <div class="modal-section-title">
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>
+          Imagens <span style="color:var(--danger);font-weight:700">*</span>
+          <span style="font-weight:400;text-transform:none;letter-spacing:0;color:#94a3b8;font-size:.7rem;margin-left:.2rem">(mín. 1 · máx. 5 · até 5 MB cada)</span>
         </div>
-        <div class="form-group">
-          <label>Categoria</label>
-          <select id="edit-category">
-            <option value="">— Sem categoria —</option>
-          </select>
-        </div>
-      </div>
 
-      <!-- ── Image Uploader ──────────────────────────────────────────────── -->
-      <div class="form-group">
-        <label>
-          Imagens *
-          <small style="color:var(--muted);font-weight:400"> (mín. 1 · máx. 5 · até 5 MB cada)</small>
-        </label>
         <div class="img-uploader" id="img-uploader"
              onclick="triggerFilePicker()"
              ondragover="onDragOver(event)"
@@ -198,80 +331,147 @@
         <div class="form-error" id="err-images" style="margin-top:.35rem"></div>
       </div>
 
-      <!-- ── Estoque ──────────────────────────────────────────────────────── -->
-      <div id="stock-row" class="form-group">
-        <label>Estoque
-          <small style="color:var(--muted);font-weight:400">(ignorado se houver variações)</small>
-        </label>
-        <input type="number" id="edit-stock" min="0" placeholder="0" value="0">
-      </div>
-
-      <!-- ── Sob Encomenda ──────────────────────────────────────────────── -->
-      <div class="form-group" style="margin-bottom:.25rem">
-        <label style="display:flex;align-items:center;gap:.5rem;cursor:pointer;user-select:none">
-          <input type="checkbox" id="edit-mto" onchange="toggleMTO()">
-          Vender sob encomenda
-          <span style="font-size:.78rem;color:var(--muted);font-weight:400">(não controla estoque)</span>
-        </label>
-      </div>
-
-      <div id="mto-box" class="preorder-box" style="display:none">
-        <div style="display:flex;align-items:center;gap:.4rem;font-size:.8rem;color:#92400e;margin-bottom:.6rem">
-          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="width:14px;height:14px;flex-shrink:0">
-            <path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/>
-          </svg>
-          Produto sob encomenda — compras liberadas sem verificação de estoque.
+      <!-- ③ Estoque & Disponibilidade -->
+      <div class="modal-section">
+        <div class="modal-section-title">
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/></svg>
+          Estoque &amp; Disponibilidade
         </div>
-        <div class="form-group" style="margin:0">
-          <label style="font-size:.82rem">
-            Data limite para pedidos
-            <small style="color:var(--muted);font-weight:400"> (opcional — deixe em branco para prazo indefinido)</small>
+
+        <div class="stock-toggle-group">
+          <!-- Opção: Tem estoque -->
+          <label class="stock-option selected" id="opt-in-stock" onclick="selectStockMode('in-stock')">
+            <input type="radio" name="stock-mode" value="in-stock" checked>
+            <div class="stock-option-icon">
+              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>
+            </div>
+            <div>
+              <div class="stock-option-label">Com estoque</div>
+              <div class="stock-option-sub">Controla quantidade disponível</div>
+            </div>
           </label>
-          <input type="date" id="edit-deadline" style="margin-top:.3rem">
+
+          <!-- Opção: Sem estoque -->
+          <label class="stock-option" id="opt-no-stock" onclick="selectStockMode('no-stock')">
+            <input type="radio" name="stock-mode" value="no-stock">
+            <div class="stock-option-icon">
+              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="8" y1="12" x2="16" y2="12"/></svg>
+            </div>
+            <div>
+              <div class="stock-option-label">Sem estoque</div>
+              <div class="stock-option-sub">Opção de venda sob encomenda</div>
+            </div>
+          </label>
+        </div>
+
+        <!-- Caixa: quantidade em estoque -->
+        <div id="stock-qty-box" class="stock-qty-box">
+          <label style="font-size:.82rem;font-weight:600;color:#475569;display:block;margin-bottom:.4rem">Quantidade disponível</label>
+          <input type="number" id="edit-stock" min="0" placeholder="0" value="0"
+                 style="max-width:160px">
+          <div style="font-size:.73rem;color:#94a3b8;margin-top:.3rem">
+            Ignorado automaticamente se o produto tiver variações com estoque próprio.
+          </div>
+        </div>
+
+        <!-- Caixa: encomenda (aparece quando "sem estoque") -->
+        <div id="mto-box" class="mto-box" style="display:none">
+          <div class="mto-box-label">
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="width:14px;height:14px;flex-shrink:0"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+            Venda sob encomenda
+          </div>
+          <label style="display:flex;align-items:center;gap:.5rem;cursor:pointer;font-size:.875rem;color:#334155;margin-bottom:.65rem">
+            <input type="checkbox" id="edit-mto" onchange="toggleMTO()">
+            Ativar venda sob encomenda para este produto
+          </label>
+          <div id="mto-deadline-row" style="display:none">
+            <label style="font-size:.82rem;font-weight:600;color:#475569;display:block;margin-bottom:.35rem">Prazo limite para encomendas</label>
+            <input type="date" id="edit-deadline" style="max-width:200px">
+            <div style="font-size:.73rem;color:#92400e;margin-top:.3rem">
+              Após este prazo o produto ficará indisponível para venda.
+            </div>
+          </div>
         </div>
       </div>
 
-      <!-- ── Ativo ──────────────────────────────────────────────────────── -->
-      <div id="active-row" class="form-group" style="display:none;margin-top:.75rem">
-        <label><input type="checkbox" id="edit-active" checked> Produto ativo</label>
+      <!-- ④ Variações -->
+      <div class="modal-section">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:.9rem">
+          <div class="modal-section-title" style="margin-bottom:0">
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><line x1="3" y1="6" x2="3.01" y2="6"/><line x1="3" y1="12" x2="3.01" y2="12"/><line x1="3" y1="18" x2="3.01" y2="18"/></svg>
+            Variações
+            <span style="font-weight:400;text-transform:none;letter-spacing:0;font-size:.7rem">(tamanho, cor, etc.)</span>
+          </div>
+          <label class="variations-toggle">
+            <span style="font-size:.82rem;color:#64748b;font-weight:400" id="var-toggle-label">Desativado</span>
+            <label class="toggle-switch">
+              <input type="checkbox" id="edit-has-variations" onchange="toggleVariations()">
+              <span class="toggle-slider"></span>
+            </label>
+          </label>
+        </div>
+
+        <div id="variations-panel" style="display:none">
+          <div class="var-header">
+            <span>Variação (ex: P, M, G, Azul…)</span>
+            <span style="text-align:center">Estoque</span>
+            <span></span>
+          </div>
+          <div id="variations-list"></div>
+          <button type="button" class="var-add-btn" onclick="addVariation()">
+            + Adicionar variação
+          </button>
+          <div style="font-size:.73rem;color:#94a3b8;margin-top:.5rem">
+            Ao usar variações, o estoque global do produto é ignorado — cada variação possui seu próprio estoque.
+          </div>
+        </div>
+        <div id="variations-empty-msg" style="font-size:.82rem;color:#94a3b8">
+          Ative as variações para cadastrar opções como tamanho, cor ou material.
+        </div>
       </div>
 
-      <!-- ── Variações ──────────────────────────────────────────────────── -->
-      <div style="margin-top:.75rem">
-        <label style="font-size:.875rem;font-weight:500">Variações (tamanhos / cores)</label>
-        <p style="font-size:.8rem;color:var(--muted);margin:.25rem 0 .5rem">
-          Se o produto tem variações, o estoque é controlado por variação.
-        </p>
-        <div id="variations-list" style="margin-top:.5rem"></div>
-        <button type="button" class="btn btn-secondary"
-                style="margin-top:.4rem;font-size:.8rem" onclick="addVariation()">
-          + Adicionar variação
-        </button>
+      <!-- ⑤ Configurações -->
+      <div class="modal-section" id="config-section" style="display:none">
+        <div class="modal-section-title">
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.07 4.93a10 10 0 0 1 0 14.14M4.93 4.93a10 10 0 0 0 0 14.14"/></svg>
+          Configurações
+        </div>
+        <div class="config-row">
+          <div>
+            <div class="config-row-label">Produto ativo</div>
+            <div class="config-row-sub">Produto visível na loja para os clientes</div>
+          </div>
+          <label class="toggle-switch">
+            <input type="checkbox" id="edit-active" checked>
+            <span class="toggle-slider"></span>
+          </label>
+        </div>
       </div>
 
-      <div class="form-error" id="err-modal" style="margin-top:.75rem"></div>
-    </div>
+    </div><!-- /modal-body -->
 
+    <!-- Footer -->
     <div class="modal-footer">
       <button class="btn btn-secondary" onclick="closeModal()">Cancelar</button>
-      <button class="btn btn-primary" id="save-btn" onclick="saveProduct()">Salvar</button>
+      <button class="btn btn-primary" id="save-btn" onclick="saveProduct()">Salvar produto</button>
     </div>
+
   </div>
 </div>
 
-<!-- ── Modal estoque / vendas por variação ────────────────────────────────── -->
+<!-- ── Modal estoque / vendas ──────────────────────────────────────────────── -->
 <div class="modal-overlay" id="stock-modal" style="display:none" onclick="if(event.target===this)closeStockModal()">
   <div class="modal" onclick="event.stopPropagation()" style="max-width:440px">
     <div class="modal-header">
-      <h2 id="stock-modal-title">Estoque e Vendas</h2>
+      <h2 id="stock-modal-title" style="font-size:1rem">Estoque</h2>
       <button class="modal-close" onclick="closeStockModal()">
         <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="width:18px;height:18px">
           <line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>
         </svg>
       </button>
     </div>
-    <div class="modal-body" id="stock-modal-body"></div>
-    <div class="modal-footer">
+    <div class="modal-body" id="stock-modal-body" style="padding:1rem 1.25rem"></div>
+    <div class="modal-footer" style="justify-content:flex-end;padding:.85rem 1.25rem">
       <button class="btn btn-secondary" onclick="closeStockModal()">Fechar</button>
     </div>
   </div>
@@ -286,14 +486,13 @@ document.getElementById('sidebar-root').innerHTML = sidebarHTML();
 let products   = [];
 let categories = [];
 
-// ── Estado do uploader ──────────────────────────────────────────────────────
+// ── Estado do uploader ────────────────────────────────────────────────────────
 let existingImages = [];
 let newFiles       = [];
 const MAX_IMAGES   = 5;
-
 function totalImages() { return existingImages.length + newFiles.length; }
 
-// ── Uploader ─────────────────────────────────────────────────────────────────
+// ── Uploader ──────────────────────────────────────────────────────────────────
 function triggerFilePicker() {
   if (totalImages() >= MAX_IMAGES) return;
   document.getElementById('file-input').value = '';
@@ -319,7 +518,7 @@ function addFiles(files) {
     newFiles.push({ file, previewUrl: URL.createObjectURL(file) })
   );
   if (allowed.length > remaining)
-    imgErr.textContent = `Apenas as primeiras ${remaining} imagens foram adicionadas (limite de ${MAX_IMAGES}).`;
+    imgErr.textContent = `Apenas as primeiras ${remaining} imagens foram adicionadas.`;
   renderThumbs();
 }
 
@@ -335,234 +534,67 @@ function renderThumbs() {
 
   let html = '';
   existingImages.forEach((img, i) => {
-    html += `<div class="img-thumb">
-      <img src="${img.url}" alt="imagem ${i + 1}">
-      <button class="img-thumb-remove" type="button"
-              onclick="event.stopPropagation();removeExisting(${i})">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" style="width:10px;height:10px">
-          <line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>
-        </svg>
-      </button>
-      ${i === 0 ? '<span class="img-thumb-badge">Capa</span>' : ''}
-    </div>`;
+    html += `
+      <div class="img-thumb">
+        <img src="${img.url}" alt="">
+        ${i === 0 ? '<span class="img-thumb-badge">Principal</span>' : ''}
+        <button class="img-thumb-remove" onclick="event.stopPropagation();removeExisting(${i})" title="Remover">✕</button>
+      </div>`;
   });
   newFiles.forEach((nf, i) => {
-    const gi = existingImages.length + i;
-    html += `<div class="img-thumb">
-      <img src="${nf.previewUrl}" alt="nova ${i + 1}">
-      <button class="img-thumb-remove" type="button"
-              onclick="event.stopPropagation();removeNew(${i})">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" style="width:10px;height:10px">
-          <line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>
-        </svg>
-      </button>
-      ${gi === 0 ? '<span class="img-thumb-badge">Capa</span>' : ''}
-    </div>`;
+    const isFirst = existingImages.length === 0 && i === 0;
+    html += `
+      <div class="img-thumb">
+        <img src="${nf.previewUrl}" alt="">
+        ${isFirst ? '<span class="img-thumb-badge">Principal</span>' : ''}
+        <button class="img-thumb-remove" onclick="event.stopPropagation();removeNew(${i})" title="Remover">✕</button>
+      </div>`;
   });
   if (total < MAX_IMAGES) {
-    html += `<div class="img-add-tile" onclick="event.stopPropagation();triggerFilePicker()">
-      <span class="img-add-tile-icon">+</span><span>Adicionar</span>
-    </div>`;
+    html += `
+      <div class="img-add-tile" onclick="event.stopPropagation();triggerFilePicker()">
+        <span class="img-add-tile-icon">＋</span>
+        <span>Adicionar</span>
+      </div>`;
   }
   grid.innerHTML = html;
 }
 
-// ── Toggle encomenda ──────────────────────────────────────────────────────────
+// ── Modo de estoque ───────────────────────────────────────────────────────────
+function selectStockMode(mode) {
+  document.getElementById('opt-in-stock').classList.toggle('selected', mode === 'in-stock');
+  document.getElementById('opt-no-stock').classList.toggle('selected', mode === 'no-stock');
+  document.getElementById('stock-qty-box').style.display  = mode === 'in-stock' ? 'block' : 'none';
+  document.getElementById('mto-box').style.display        = mode === 'no-stock' ? 'block' : 'none';
+  if (mode === 'in-stock') {
+    document.getElementById('edit-mto').checked = false;
+    document.getElementById('mto-deadline-row').style.display = 'none';
+  }
+}
+
 function toggleMTO() {
   const on = document.getElementById('edit-mto').checked;
-  document.getElementById('mto-box').style.display = on ? 'block' : 'none';
-  if (!on) document.getElementById('edit-deadline').value = '';
-}
-
-// ── Tabela ────────────────────────────────────────────────────────────────────
-async function loadCategories() {
-  const res  = await fetch('/api/categories');
-  categories = await res.json();
-  const sel  = document.getElementById('edit-category');
-  sel.innerHTML = '<option value="">— Sem categoria —</option>' +
-    categories.map(c => `<option value="${c.id}">${c.name}</option>`).join('');
-}
-
-async function loadProducts() {
-  await requireAdmin();
-  await loadCategories();
-  const res = await fetch('/api/admin/products');
-  products  = await res.json();
-
-  const tbody = document.getElementById('products-body');
-
-  // SVGs
-  const iconEdit = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>`;
-  const iconDel  = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M10 11v6"/><path d="M14 11v6"/><path d="M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"/></svg>`;
-  const iconWarn = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>`;
-  const iconList = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><line x1="3" y1="6" x2="3.01" y2="6"/><line x1="3" y1="12" x2="3.01" y2="12"/><line x1="3" y1="18" x2="3.01" y2="18"/></svg>`;
-  const iconPkg  = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/><polyline points="3.27 6.96 12 12.01 20.73 6.96"/><line x1="12" y1="22.08" x2="12" y2="12"/></svg>`;
-  const imgPlaceholder = `<div class="product-thumb-placeholder"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg></div>`;
-
-  tbody.innerHTML = products.map(p => {
-    const hasVariations = p.variations && p.variations.length > 0;
-    const isMTO         = !!p.made_to_order;
-
-    // Coluna Estoque
-    let estoqueHTML;
-    if (isMTO) {
-      const totalSold = p.total_ordered || 0;
-      estoqueHTML = `
-        <button class="stock-btn" onclick="openStockDetail(${p.id})" title="Ver detalhes por variação">
-          ${iconPkg}
-          <span style="color:#f59e0b;font-size:.8rem;font-weight:600">${totalSold} vendido${totalSold !== 1 ? 's' : ''}</span>
-        </button>`;
-    } else if (hasVariations) {
-      const totalStock = p.variations.reduce((s, v) => s + v.stock, 0);
-      const semEstoque = totalStock <= 0;
-      estoqueHTML = `
-        <button class="stock-btn ${semEstoque ? 'warn' : ''}" onclick="openStockDetail(${p.id})" title="Ver detalhes por variação">
-          ${semEstoque ? iconWarn : iconList}
-          <span>${totalStock} em estoque</span>
-        </button>`;
-    } else {
-      const stock      = p.stock ?? 0;
-      const semEstoque = stock <= 0;
-      estoqueHTML = `
-        <button class="stock-btn ${semEstoque ? 'warn' : ''}" onclick="openStockDetail(${p.id})" title="Ver detalhes">
-          ${semEstoque ? iconWarn : iconList}
-          <span>${stock}</span>
-        </button>`;
-    }
-
-    // Categoria
-    const catName = p.category_id
-      ? (categories.find(c => c.id === p.category_id)?.name || '—')
-      : '—';
-
-    // Prazo (encomenda)
-    const deadlineLabel = isMTO && p.preorder_deadline
-      ? `<div style="font-size:.7rem;color:${p.preorder_expired ? '#94a3b8' : '#f59e0b'};margin-top:.15rem">
-           ${p.preorder_expired ? 'Encerrado' : 'Até'} ${new Date(p.preorder_deadline + 'T00:00:00').toLocaleDateString('pt-BR')}
-         </div>`
-      : '';
-
-    return `
-      <tr>
-        <td>
-          ${p.image_url
-            ? `<img class="product-thumb" src="${p.image_url}" alt="${p.name}">`
-            : imgPlaceholder}
-        </td>
-        <td>
-          <div style="display:flex;align-items:center;gap:.4rem;font-weight:600">
-            ${p.name}
-            ${isMTO ? `<span class="badge-mto">Encomenda</span>` : ''}
-          </div>
-          ${deadlineLabel}
-        </td>
-        <td style="color:#64748b;font-size:.85rem">${catName}</td>
-        <td style="font-weight:600">${fmt(p.price)}</td>
-        <td>${estoqueHTML}</td>
-        <td style="font-size:.82rem;color:#64748b">
-          ${hasVariations ? p.variations.map(v => v.label).join(', ') : '—'}
-        </td>
-        <td><span class="badge ${p.active ? 'badge-approved' : 'badge-rejected'}">${p.active ? 'Ativo' : 'Inativo'}</span></td>
-        <td>
-          <div class="action-cell">
-            <button class="btn btn-secondary" onclick="editProduct(${p.id})">
-              ${iconEdit} Editar
-            </button>
-            <button class="btn btn-secondary" style="color:var(--danger);border-color:var(--danger)"
-              onclick="deleteProduct(${p.id})">
-              ${iconDel} Excluir
-            </button>
-          </div>
-        </td>
-      </tr>`;
-  }).join('');
-}
-
-// ── Modal Estoque / Vendas por Variação ───────────────────────────────────────
-function openStockDetail(productId) {
-  const p = products.find(x => x.id === productId);
-  if (!p) return;
-
-  document.getElementById('stock-modal-title').textContent = `Estoque e Vendas — ${p.name}`;
-
-  const isMTO         = !!p.made_to_order;
-  const hasVariations = p.variations && p.variations.length > 0;
-
-  let bodyHTML = '';
-
-  if (hasVariations) {
-    const totalStock = p.variations.reduce((s, v) => s + v.stock, 0);
-    const totalSold  = p.variations.reduce((s, v) => s + (v.sold || 0), 0);
-
-    bodyHTML = `
-      <table class="var-sales-table">
-        <thead>
-          <tr>
-            <th>Variação</th>
-            <th style="text-align:center">${isMTO ? 'Disponível' : 'Estoque'}</th>
-            <th style="text-align:center">Vendidos</th>
-          </tr>
-        </thead>
-        <tbody>
-          ${p.variations.map(v => `
-            <tr>
-              <td>${v.label}</td>
-              <td style="text-align:center">${isMTO ? '—' : v.stock}</td>
-              <td style="text-align:center">
-                <span class="sold-chip">${v.sold || 0}</span>
-              </td>
-            </tr>
-          `).join('')}
-          <tr>
-            <td>Total</td>
-            <td style="text-align:center">${isMTO ? '—' : totalStock}</td>
-            <td style="text-align:center"><span class="sold-chip">${totalSold}</span></td>
-          </tr>
-        </tbody>
-      </table>`;
-  } else {
-    // Produto sem variações
-    const sold = p.total_ordered || 0;
-    const stock = isMTO ? '—' : (p.stock ?? 0);
-    bodyHTML = `
-      <table class="var-sales-table">
-        <thead>
-          <tr>
-            <th>Item</th>
-            <th style="text-align:center">${isMTO ? 'Tipo' : 'Estoque'}</th>
-            <th style="text-align:center">Vendidos</th>
-          </tr>
-        </thead>
-        <tbody>
-          <tr>
-            <td>${p.name}</td>
-            <td style="text-align:center">${isMTO ? 'Sob encomenda' : stock}</td>
-            <td style="text-align:center"><span class="sold-chip">${sold}</span></td>
-          </tr>
-        </tbody>
-      </table>`;
-  }
-
-  document.getElementById('stock-modal-body').innerHTML = bodyHTML;
-  document.getElementById('stock-modal').style.display = 'flex';
-}
-
-function closeStockModal() {
-  document.getElementById('stock-modal').style.display = 'none';
+  document.getElementById('mto-deadline-row').style.display = on ? 'block' : 'none';
 }
 
 // ── Variações ─────────────────────────────────────────────────────────────────
+function toggleVariations() {
+  const on = document.getElementById('edit-has-variations').checked;
+  document.getElementById('variations-panel').style.display    = on ? 'block' : 'none';
+  document.getElementById('variations-empty-msg').style.display = on ? 'none' : 'block';
+  document.getElementById('var-toggle-label').textContent = on ? 'Ativado' : 'Desativado';
+  document.getElementById('var-toggle-label').style.color = on ? '#4338ca' : '#64748b';
+}
+
 function addVariation(id = '', label = '', stock = 0) {
   const div = document.createElement('div');
-  div.className  = 'variation-row';
-  div.style.cssText = 'display:flex;gap:.5rem;margin-bottom:.4rem;align-items:center';
+  div.className = 'variation-row';
   div.innerHTML = `
     <input type="hidden" value="${id}">
-    <input type="text"   placeholder="Ex: P, M, G, GG" value="${label}" style="flex:2">
-    <input type="number" placeholder="Estoque" value="${stock}" min="0" style="flex:1">
-    <button type="button" onclick="this.parentElement.remove()"
-      style="background:none;border:none;color:var(--danger);cursor:pointer;padding:0 .25rem;display:flex;align-items:center">
-      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="width:16px;height:16px">
+    <input type="text" placeholder="Ex: P, M, G, Azul…" value="${label}">
+    <input type="number" placeholder="0" value="${stock}" min="0">
+    <button type="button" class="var-remove-btn" onclick="this.closest('.variation-row').remove()" title="Remover">
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
         <line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>
       </svg>
     </button>`;
@@ -580,28 +612,44 @@ function resetUploader(images = []) {
 }
 
 function openModal(product = null) {
-  document.getElementById('edit-id').value            = product?.id    || '';
-  document.getElementById('edit-name').value          = product?.name  || '';
-  document.getElementById('edit-desc').value          = product?.description || '';
-  document.getElementById('edit-price').value         = product?.price || '';
-  document.getElementById('edit-stock').value         = product?.stock ?? 0;
-  document.getElementById('edit-category').value      = product?.category_id || '';
-  document.getElementById('edit-active').checked      = product ? !!product.active : true;
-  document.getElementById('active-row').style.display = product ? 'block' : 'none';
-  document.getElementById('modal-title').textContent  = product ? 'Editar Produto' : 'Novo Produto';
-  document.getElementById('err-modal').textContent    = '';
+  const isEdit = !!product;
+
+  document.getElementById('edit-id').value    = product?.id    || '';
+  document.getElementById('edit-name').value  = product?.name  || '';
+  document.getElementById('edit-desc').value  = product?.description || '';
+  document.getElementById('edit-price').value = product?.price || '';
+  document.getElementById('edit-category').value = product?.category_id || '';
+  document.getElementById('modal-title').textContent = isEdit ? 'Editar Produto' : 'Novo Produto';
+  document.getElementById('err-modal').textContent   = '';
   document.getElementById('variations-list').innerHTML = '';
 
-  const isMTO = !!product?.made_to_order;
-  document.getElementById('edit-mto').checked         = isMTO;
-  document.getElementById('mto-box').style.display    = isMTO ? 'block' : 'none';
-  document.getElementById('edit-deadline').value      = product?.preorder_deadline || '';
+  // Configurações (ativo) — só mostra em edição
+  document.getElementById('config-section').style.display = isEdit ? 'block' : 'none';
+  if (isEdit) document.getElementById('edit-active').checked = !!product.active;
 
-  resetUploader(product?.images || (product?.image_url ? [product.image_url] : []));
-
-  if (product?.variations?.length) {
-    product.variations.forEach(v => addVariation(v.id, v.label, v.stock));
+  // Modo estoque
+  const isMTO  = !!product?.made_to_order;
+  const noStock = isMTO; // sem estoque → mostra encomenda
+  selectStockMode(noStock ? 'no-stock' : 'in-stock');
+  document.getElementById('edit-stock').value = product?.stock ?? 0;
+  if (isMTO) {
+    document.getElementById('edit-mto').checked = true;
+    document.getElementById('mto-deadline-row').style.display = 'block';
+    document.getElementById('edit-deadline').value = product?.preorder_deadline || '';
+  } else {
+    document.getElementById('edit-mto').checked = false;
+    document.getElementById('mto-deadline-row').style.display = 'none';
+    document.getElementById('edit-deadline').value = '';
   }
+
+  // Variações
+  const hasVars = !!(product?.variations?.length);
+  document.getElementById('edit-has-variations').checked = hasVars;
+  toggleVariations();
+  if (hasVars) product.variations.forEach(v => addVariation(v.id, v.label, v.stock));
+
+  // Imagens
+  resetUploader(product?.images || (product?.image_url ? [product.image_url] : []));
 
   document.getElementById('modal').style.display = 'flex';
 }
@@ -629,45 +677,47 @@ async function saveProduct() {
   const name        = document.getElementById('edit-name').value.trim();
   const description = document.getElementById('edit-desc').value.trim();
   const price       = parseFloat(document.getElementById('edit-price').value);
-  const stock       = parseInt(document.getElementById('edit-stock').value, 10) || 0;
-  const active      = document.getElementById('edit-active').checked;
   const category_id = document.getElementById('edit-category').value || null;
-  const mto         = document.getElementById('edit-mto').checked;
-  const deadline    = document.getElementById('edit-deadline').value || '';
+  const active      = id ? document.getElementById('edit-active').checked : true;
+
+  const stockMode = document.getElementById('opt-in-stock').classList.contains('selected')
+    ? 'in-stock' : 'no-stock';
+  const stock    = stockMode === 'in-stock' ? parseInt(document.getElementById('edit-stock').value, 10) || 0 : 0;
+  const mto      = stockMode === 'no-stock' && document.getElementById('edit-mto').checked;
+  const deadline = document.getElementById('edit-deadline').value || '';
 
   document.getElementById('err-modal').textContent  = '';
   document.getElementById('err-images').textContent = '';
 
-  if (!name || !price) {
-    document.getElementById('err-modal').textContent = 'Nome e preço são obrigatórios.';
-    return;
-  }
-  if (totalImages() === 0) {
-    document.getElementById('err-images').textContent = 'Adicione pelo menos 1 imagem.';
-    return;
-  }
+  // Validações
+  if (!name) { document.getElementById('err-modal').textContent = 'Nome é obrigatório.'; return; }
+  if (!description) { document.getElementById('err-modal').textContent = 'Descrição é obrigatória.'; return; }
+  if (!price || price <= 0) { document.getElementById('err-modal').textContent = 'Informe um preço válido.'; return; }
+  if (!category_id) { document.getElementById('err-modal').textContent = 'Selecione uma categoria.'; return; }
+  if (totalImages() === 0) { document.getElementById('err-images').textContent = 'Adicione pelo menos 1 imagem.'; return; }
 
-  const rows       = document.querySelectorAll('#variations-list .variation-row');
+  const rows = document.querySelectorAll('#variations-list .variation-row');
   const variations = Array.from(rows).map(r => {
     const inputs = r.querySelectorAll('input');
     return { id: inputs[0].value || null, label: inputs[1].value.trim(), stock: parseInt(inputs[2].value, 10) || 0 };
   }).filter(v => v.label);
 
   const fd = new FormData();
-  fd.append('name',            name);
-  fd.append('description',     description);
-  fd.append('price',           price);
-  fd.append('stock',           stock);
-  fd.append('active',          active);
-  fd.append('category_id',     category_id || '');
-  fd.append('made_to_order',   mto ? '1' : '0');
+  fd.append('name',              name);
+  fd.append('description',       description);
+  fd.append('price',             price);
+  fd.append('stock',             stock);
+  fd.append('active',            active ? '1' : '0');
+  fd.append('category_id',       category_id || '');
+  fd.append('made_to_order',     mto ? '1' : '0');
   fd.append('preorder_deadline', mto ? deadline : '');
-  fd.append('variations',      JSON.stringify(variations));
-  fd.append('keepImages',      JSON.stringify(existingImages.map(i => i.url)));
+  fd.append('variations',        JSON.stringify(variations));
+  fd.append('keepImages',        JSON.stringify(existingImages.map(i => i.url)));
   newFiles.forEach(nf => fd.append('images', nf.file));
 
   const saveBtn = document.getElementById('save-btn');
-  saveBtn.disabled = true; saveBtn.textContent = 'Salvando…';
+  saveBtn.disabled = true;
+  saveBtn.textContent = 'Salvando…';
 
   try {
     const url    = id ? `/api/products/${id}` : '/api/products';
@@ -682,8 +732,142 @@ async function saveProduct() {
   } catch (err) {
     document.getElementById('err-modal').textContent = err.message || 'Erro ao salvar.';
   } finally {
-    saveBtn.disabled = false; saveBtn.textContent = 'Salvar';
+    saveBtn.disabled = false;
+    saveBtn.textContent = 'Salvar produto';
   }
+}
+
+// ── Modal de estoque ──────────────────────────────────────────────────────────
+function openStockModal(id) {
+  const p = products.find(x => x.id === id);
+  if (!p) return;
+  document.getElementById('stock-modal-title').textContent = p.name;
+  const isMTO = !!p.made_to_order;
+  let bodyHTML = '';
+
+  if (p.variations?.length) {
+    const total_stock = p.variations.reduce((s, v) => s + v.stock, 0);
+    const total_sold  = p.variations.reduce((s, v) => s + (v.sold || 0), 0);
+    bodyHTML = `
+      <table class="var-sales-table">
+        <thead><tr>
+          <th>Variação</th>
+          <th style="text-align:center">Estoque</th>
+          <th style="text-align:center">Vendidos</th>
+        </tr></thead>
+        <tbody>
+          ${p.variations.map(v => `
+            <tr>
+              <td>${v.label}</td>
+              <td style="text-align:center">${v.stock}</td>
+              <td style="text-align:center"><span class="sold-chip">${v.sold || 0}</span></td>
+            </tr>
+          `).join('')}
+          <tr>
+            <td>Total</td>
+            <td style="text-align:center">${total_stock}</td>
+            <td style="text-align:center"><span class="sold-chip">${total_sold}</span></td>
+          </tr>
+        </tbody>
+      </table>`;
+  } else {
+    const sold  = p.total_ordered ?? 0;
+    const stock = isMTO ? '—' : (p.stock ?? 0);
+    bodyHTML = `
+      <table class="var-sales-table">
+        <thead><tr>
+          <th>Item</th>
+          <th style="text-align:center">${isMTO ? 'Tipo' : 'Estoque'}</th>
+          <th style="text-align:center">Vendidos</th>
+        </tr></thead>
+        <tbody>
+          <tr>
+            <td>${p.name}</td>
+            <td style="text-align:center">${isMTO ? 'Sob encomenda' : stock}</td>
+            <td style="text-align:center"><span class="sold-chip">${sold}</span></td>
+          </tr>
+        </tbody>
+      </table>`;
+  }
+
+  document.getElementById('stock-modal-body').innerHTML = bodyHTML;
+  document.getElementById('stock-modal').style.display = 'flex';
+}
+function closeStockModal() { document.getElementById('stock-modal').style.display = 'none'; }
+
+// ── Carregar produtos ─────────────────────────────────────────────────────────
+async function loadProducts() {
+  await requireAdmin();
+
+  const [pRes, cRes] = await Promise.all([
+    fetch('/api/admin/products'),
+    fetch('/api/categories'),
+  ]);
+  products   = await pRes.json();
+  categories = await cRes.json();
+
+  // Preencher select de categorias no modal
+  const catSel = document.getElementById('edit-category');
+  catSel.innerHTML = '<option value="">— Selecione —</option>' +
+    categories.map(c => `<option value="${c.id}">${c.name}</option>`).join('');
+
+  const fmt = v => new Intl.NumberFormat('pt-BR',{style:'currency',currency:'BRL'}).format(v);
+
+  const tbody = document.getElementById('products-body');
+  if (!products.length) {
+    tbody.innerHTML = '<tr><td colspan="8" class="table-empty">Nenhum produto cadastrado.</td></tr>';
+    return;
+  }
+
+  tbody.innerHTML = products.map(p => {
+    const cat   = categories.find(c => c.id === p.category_id);
+    const isMTO = !!p.made_to_order;
+    const stockLabel = isMTO
+      ? `<span class="badge-mto">Encomenda</span>`
+      : (p.variations?.length
+          ? `${p.variations.reduce((s,v)=>s+v.stock,0)} em var.`
+          : `${p.stock ?? 0} un.`);
+    const sold = p.total_ordered ?? 0;
+    const stockWarn = !isMTO && !p.variations?.length && (p.stock ?? 0) <= 0;
+
+    return `
+      <tr>
+        <td>
+          ${p.image_url
+            ? `<img src="${p.image_url}" class="product-thumb" alt="">`
+            : `<div class="product-thumb-placeholder"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg></div>`
+          }
+        </td>
+        <td><strong style="font-size:.9rem">${p.name}</strong></td>
+        <td style="color:#64748b;font-size:.85rem">${cat?.name || '—'}</td>
+        <td style="font-weight:600">${fmt(p.price)}</td>
+        <td>
+          <button class="stock-btn ${stockWarn ? 'warn' : ''}" onclick="openStockModal(${p.id})">
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/></svg>
+            ${stockLabel} · ${sold} vendidos
+          </button>
+        </td>
+        <td style="font-size:.85rem;color:#64748b">
+          ${p.variations?.length ? `${p.variations.length} variação(ões)` : '—'}
+        </td>
+        <td>
+          <span class="badge ${p.active ? 'badge-approved' : 'badge-rejected'}">
+            ${p.active ? 'Ativo' : 'Inativo'}
+          </span>
+        </td>
+        <td>
+          <div class="action-cell">
+            <button class="btn btn-secondary" onclick="editProduct(${p.id})">
+              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+              Editar
+            </button>
+            <button class="btn btn-danger" onclick="deleteProduct(${p.id})">
+              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M10 11v6"/><path d="M14 11v6"/><path d="M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"/></svg>
+            </button>
+          </div>
+        </td>
+      </tr>`;
+  }).join('');
 }
 
 loadProducts();

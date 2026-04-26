@@ -69,14 +69,20 @@
   }
 
   function fmtDate(dt) {
-    return new Date(dt).toLocaleDateString('pt-BR', { day:'2-digit', month:'2-digit', year:'numeric', hour:'2-digit', minute:'2-digit' });
+    return new Date(dt).toLocaleDateString('pt-BR', {
+      day:'2-digit', month:'2-digit', year:'numeric',
+      hour:'2-digit', minute:'2-digit'
+    });
   }
 
   const STATUS_LABEL = {
     PENDING:'Pendente', CONFIRMED:'Confirmado', PREPARING:'Preparando',
     SHIPPED:'Enviado', DELIVERED:'Entregue', CANCELLED:'Cancelado',
   };
-  const PAY_LABEL = { PENDING:'Aguardando', APPROVED:'Aprovado', REJECTED:'Recusado', REFUNDED:'Reembolsado', CANCELLED:'Cancelado' };
+  const PAY_LABEL = {
+    PENDING:'Aguardando', APPROVED:'Aprovado', REJECTED:'Recusado',
+    REFUNDED:'Reembolsado', CANCELLED:'Cancelado',
+  };
 
   async function search() {
     const input = document.getElementById('search-input').value.trim();
@@ -84,17 +90,41 @@
     err.textContent = '';
     if (!input) { err.textContent = 'Informe um valor para busca.'; return; }
 
+    // Monta a URL correta para os GET endpoints do backend
     const url = currentTab === 'code'
       ? `/api/track/order/${encodeURIComponent(input.toUpperCase())}`
-      : `/api/track/phone/${encodeURIComponent(input.replace(/\D/g,''))}`;
+      : `/api/track/phone/${encodeURIComponent(input.replace(/\D/g, ''))}`;
 
-    const res  = await fetch(url);
-    const data = await res.json();
+    let data;
+    try {
+      const res = await fetch(url);
+      data = await res.json();
+      if (!res.ok) {
+        err.textContent = data.error || 'Erro ao buscar pedido.';
+        document.getElementById('results').innerHTML = '';
+        return;
+      }
+    } catch {
+      err.textContent = 'Erro de conexão. Tente novamente.';
+      return;
+    }
+
+    // O backend retorna { orders: [...] }
+    const orders = data.orders ?? [];
     const results = document.getElementById('results');
 
-    if (!res.ok) { err.textContent = data.error || 'Pedido não encontrado.'; results.innerHTML = ''; return; }
+    if (!orders.length) {
+      results.innerHTML = `
+        <div style="text-align:center;color:var(--muted);padding:2rem 0">
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" style="width:40px;height:40px;opacity:.35;margin:0 auto 1rem;display:block">
+            <circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/>
+          </svg>
+          <p>Nenhum pedido encontrado.</p>
+          <p style="font-size:.85rem;margin-top:.25rem">Verifique o ${currentTab === 'code' ? 'código' : 'telefone'} informado e tente novamente.</p>
+        </div>`;
+      return;
+    }
 
-    const orders = Array.isArray(data) ? data : [data];
     results.innerHTML = orders.map(o => `
       <div class="card" style="padding:1.25rem;margin-bottom:1rem">
         <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:.5rem">
@@ -119,6 +149,11 @@
       </div>
     `).join('');
   }
+
+  // Busca ao pressionar Enter
+  document.addEventListener('keydown', e => {
+    if (e.key === 'Enter') search();
+  });
 </script>
 </body>
 </html>

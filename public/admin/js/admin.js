@@ -1,5 +1,13 @@
 // ── Shared admin utilities ───────────────────────────────────────────────────
 
+// Oculta imediatamente para evitar flash de conteúdo antes da verificação de auth.
+// A visibilidade é restaurada pelo requireAdmin() após confirmar a sessão.
+document.documentElement.style.visibility = 'hidden';
+
+// Cache da promise para evitar chamadas duplicadas quando a página
+// chama requireAdmin() manualmente E o DOMContentLoaded também chama.
+let _authPromise = null;
+
 function fmt(val) {
   return new Intl.NumberFormat('pt-BR', { style:'currency', currency:'BRL' }).format(val);
 }
@@ -30,20 +38,32 @@ function badgeClass(status) {
   return 'badge badge-' + (map[status] || 'pending');
 }
 
-// ── Auth ─────────────────────────────────────────────────────────────────────
+// ── Auth ──────────────────────────────────────────────────────────────────────
 async function requireAdmin() {
-  try {
-    const res = await fetch('/api/auth/me');
-    if (!res.ok) throw new Error();
-    return await res.json();
-  } catch {
-    window.location.href = '/admin/login.html';
+  if (!_authPromise) {
+    _authPromise = fetch('/api/auth/me')
+      .then(res => {
+        if (!res.ok) throw new Error('not authenticated');
+        return res.json();
+      })
+      .then(user => {
+        // Autenticado: exibe a página
+        document.documentElement.style.visibility = 'visible';
+        return user;
+      })
+      .catch(() => {
+        // Não autenticado: redireciona sem exibir nada
+        window.location.replace('/admin/login.html');
+        // Promise que nunca resolve para parar qualquer cadeia de await
+        return new Promise(() => {});
+      });
   }
+  return _authPromise;
 }
 
 async function logout() {
   await fetch('/api/auth/logout', { method:'POST' });
-  window.location.href = '/admin/login.html';
+  window.location.replace('/admin/login.html');
 }
 
 // ── Active nav link ───────────────────────────────────────────────────────────
@@ -59,7 +79,6 @@ function injectMenuBtn() {
   const topbar = document.querySelector('.admin-topbar');
   if (!topbar || topbar.querySelector('.menu-btn')) return;
 
-  // Wrap existing content
   const h1 = topbar.querySelector('h1');
   if (!h1) return;
 
@@ -69,11 +88,16 @@ function injectMenuBtn() {
   btn.innerHTML = '☰';
   btn.onclick = openSidebar;
 
-  // If h1 is the first child, insert button before it
   topbar.insertBefore(btn, h1);
 }
 
+// ── Inicialização ─────────────────────────────────────────────────────────────
 document.addEventListener('DOMContentLoaded', () => {
+  // Dispara a verificação de auth imediatamente em TODAS as páginas admin.
+  // Se a página também chamar requireAdmin() manualmente, o cache (_authPromise)
+  // garante que só haverá UMA requisição ao servidor — sem duplicata.
+  requireAdmin();
+
   setActiveNav();
   injectMenuBtn();
 });
