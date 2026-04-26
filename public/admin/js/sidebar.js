@@ -3,7 +3,7 @@ function sidebarHTML() {
   return `
     <aside class="sidebar">
       <div class="sidebar-logo">
-        <img src="/img/logo/logoipsum-3.png" alt="MiniLoja" style="height:32px;width:auto;display:block;">
+        <img src="/img/logo/logoipsum-3-write.png" alt="MiniLoja" style="height:32px;width:auto;display:block;">
       </div>
       <nav class="sidebar-nav">
         <a href="/admin/index.html">Dashboard</a>
