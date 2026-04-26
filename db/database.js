@@ -26,7 +26,7 @@ db.transaction = (fn) => {
   };
 };
 
-// ── Schema ───────────────────────────────────────────────────────────────────
+// ── Schema principal ─────────────────────────────────────────────────────────
 db.exec(`
   CREATE TABLE IF NOT EXISTS categories (
     id         INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -45,15 +45,16 @@ db.exec(`
   );
 
   CREATE TABLE IF NOT EXISTS products (
-    id          INTEGER PRIMARY KEY AUTOINCREMENT,
-    name        TEXT    NOT NULL,
-    description TEXT,
-    price       REAL    NOT NULL,
-    image_url   TEXT,
-    stock       INTEGER NOT NULL DEFAULT 0,
-    active      INTEGER NOT NULL DEFAULT 1,
-    category_id INTEGER REFERENCES categories(id),
-    created_at  TEXT    NOT NULL DEFAULT (datetime('now'))
+    id            INTEGER PRIMARY KEY AUTOINCREMENT,
+    name          TEXT    NOT NULL,
+    description   TEXT,
+    price         REAL    NOT NULL,
+    image_url     TEXT,
+    stock         INTEGER NOT NULL DEFAULT 0,
+    active        INTEGER NOT NULL DEFAULT 1,
+    made_to_order INTEGER NOT NULL DEFAULT 0,
+    category_id   INTEGER REFERENCES categories(id),
+    created_at    TEXT    NOT NULL DEFAULT (datetime('now'))
   );
 
   CREATE TABLE IF NOT EXISTS product_variations (
@@ -63,11 +64,19 @@ db.exec(`
     stock      INTEGER NOT NULL DEFAULT 0
   );
 
+  CREATE TABLE IF NOT EXISTS product_images (
+    id         INTEGER PRIMARY KEY AUTOINCREMENT,
+    product_id INTEGER NOT NULL REFERENCES products(id) ON DELETE CASCADE,
+    url        TEXT    NOT NULL,
+    sort_order INTEGER NOT NULL DEFAULT 0
+  );
+
   CREATE TABLE IF NOT EXISTS customers (
     id         INTEGER PRIMARY KEY AUTOINCREMENT,
     name       TEXT NOT NULL,
     phone      TEXT NOT NULL UNIQUE,
     email      TEXT,
+    cpf        TEXT,
     created_at TEXT NOT NULL DEFAULT (datetime('now'))
   );
 
@@ -100,13 +109,35 @@ db.exec(`
     payment_url      TEXT,
     created_at       TEXT    NOT NULL DEFAULT (datetime('now'))
   );
+
+  CREATE TABLE IF NOT EXISTS search_attempts (
+    id         INTEGER PRIMARY KEY AUTOINCREMENT,
+    ip         TEXT    NOT NULL,
+    created_at TEXT    NOT NULL DEFAULT (datetime('now'))
+  );
 `);
 
-// ── Migrações para bancos existentes ─────────────────────────────────────────
-// Adiciona category_id em products caso o banco já existia sem ela.
-try {
-  db.exec('ALTER TABLE products ADD COLUMN category_id INTEGER REFERENCES categories(id)');
-  console.log('[db] Coluna category_id adicionada à tabela products.');
-} catch (_) { /* já existe — ok */ }
+// ── Migrações para bancos já existentes ──────────────────────────────────────
+// Cada item é tentado individualmente; erros de "já existe" são silenciados.
+const migrations = [
+  'ALTER TABLE products  ADD COLUMN category_id   INTEGER REFERENCES categories(id)',
+  'ALTER TABLE products  ADD COLUMN made_to_order INTEGER NOT NULL DEFAULT 0',
+  'ALTER TABLE customers ADD COLUMN cpf           TEXT',
+  `CREATE TABLE IF NOT EXISTS product_images (
+     id         INTEGER PRIMARY KEY AUTOINCREMENT,
+     product_id INTEGER NOT NULL REFERENCES products(id) ON DELETE CASCADE,
+     url        TEXT    NOT NULL,
+     sort_order INTEGER NOT NULL DEFAULT 0
+   )`,
+  `CREATE TABLE IF NOT EXISTS search_attempts (
+     id         INTEGER PRIMARY KEY AUTOINCREMENT,
+     ip         TEXT    NOT NULL,
+     created_at TEXT    NOT NULL DEFAULT (datetime('now'))
+   )`,
+];
+
+for (const sql of migrations) {
+  try { db.exec(sql); } catch (_) { /* coluna/tabela já existe — ok */ }
+}
 
 module.exports = db;

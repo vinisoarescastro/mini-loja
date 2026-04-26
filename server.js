@@ -1,7 +1,7 @@
 require('dotenv').config();
-const express = require('express');
+const express      = require('express');
 const cookieParser = require('cookie-parser');
-const path = require('path');
+const path         = require('path');
 
 const app = express();
 
@@ -22,7 +22,7 @@ const { trackRouter, webhookRouter } = require('./routes/trackAndWebhook');
 app.use('/api/track',            trackRouter);
 app.use('/api/payments/webhook', webhookRouter);
 
-// ── SPA fallback: redireciona /admin/* para admin/index.html ─────────────────
+// ── SPA fallback ──────────────────────────────────────────────────────────────
 app.get('/admin', (req, res) => res.redirect('/admin/index.html'));
 
 // ── Start ─────────────────────────────────────────────────────────────────────
