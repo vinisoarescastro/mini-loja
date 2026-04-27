@@ -147,6 +147,28 @@
     /* Botão encomenda */
     .btn-preorder { background: #f59e0b; border-color: #f59e0b; color: #fff; }
     .btn-preorder:hover { background: #d97706; border-color: #d97706; }
+
+    /* Rodapé do card — banner sobre a imagem */
+    .product-card-footer {
+      position: absolute;
+      bottom: 0;
+      left: 0;
+      right: 0;
+      padding: .45rem .85rem;
+      font-size: .72rem;
+      font-weight: 700;
+      letter-spacing: .04em;
+      text-align: center;
+      text-transform: uppercase;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      /* Sombra suave para separar da imagem */
+      box-shadow: 0 -2px 8px rgba(0,0,0,.18);
+      /* Transição suave no hover do card */
+      transition: opacity .2s;
+      z-index: 2;
+    }
   </style>
 </head>
 <body>
@@ -330,9 +352,13 @@
       return `
         <div class="product-card">
           <div class="product-card-img-wrap">
-            <img src="${p.image_url || '/img/placeholder.png'}" alt="${p.name}"
-                 onerror="this.src='data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 width=%22400%22 height=%22240%22><rect fill=%22%23f1f5f9%22 width=%22400%22 height=%22240%22/></svg>'">
+            <img src="..." alt="...">
             ${badges ? `<div class="product-card-badges">${badges}</div>` : ''}
+            ${p.card_footer ? `
+              <div class="product-card-footer"
+                  style="background:${p.card_footer_bg||'#1e293b'};color:${p.card_footer_color||'#fff'}">
+                ${p.card_footer}
+              </div>` : ''}
           </div>
           <div class="product-card-body">
             ${p.category_name ? `<div class="product-card-cat">${p.category_name}</div>` : ''}

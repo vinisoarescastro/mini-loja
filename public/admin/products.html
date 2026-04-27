@@ -211,6 +211,27 @@
     .config-row-label { font-size: .875rem; font-weight: 500; color: #334155; }
     .config-row-sub { font-size: .75rem; color: #94a3b8; margin-top: .05rem; }
 
+    /* ── Rodapé do card ──────────────────────────────────────────────────── */
+    .footer-preview-wrap {
+      position: relative; overflow: hidden; border-radius: 8px;
+      border: 1px solid #e2e8f0; background: #f1f5f9; height: 64px;
+      display: flex; align-items: center; justify-content: center;
+    }
+    .footer-preview-bar {
+      position: absolute; bottom: 0; left: 0; right: 0;
+      padding: .35rem .6rem; font-size: .7rem; font-weight: 700;
+      text-align: center; text-transform: uppercase; letter-spacing: .04em;
+      white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+    }
+    .color-swatch {
+      width: 32px; height: 32px; border-radius: 6px;
+      border: 2px solid #e2e8f0; overflow: hidden; padding: 0; flex-shrink: 0;
+    }
+    .color-swatch input[type="color"] {
+      width: 140%; height: 140%; margin: -20% 0 0 -20%;
+      border: none; padding: 0; cursor: pointer; background: none;
+    }
+
     /* ── Footer ──────────────────────────────────────────────────────────── */
     .modal-footer {
       padding: 1rem 1.5rem;
@@ -430,7 +451,61 @@
         </div>
       </div>
 
-      <!-- ⑤ Configurações -->
+      <!-- ⑤ Rodapé do Anúncio -->
+      <div class="modal-section">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:.9rem">
+          <div class="modal-section-title" style="margin-bottom:0">
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="16" rx="2"/><line x1="3" y1="16" x2="21" y2="16"/></svg>
+            Rodapé do Anúncio
+            <span style="font-weight:400;text-transform:none;letter-spacing:0;font-size:.7rem">banner sobre a imagem</span>
+          </div>
+          <label class="variations-toggle">
+            <span style="font-size:.82rem;color:#64748b;font-weight:400" id="footer-toggle-label">Desativado</span>
+            <label class="toggle-switch">
+              <input type="checkbox" id="edit-has-footer" onchange="toggleFooter()">
+              <span class="toggle-slider"></span>
+            </label>
+          </label>
+        </div>
+        <div id="footer-panel" style="display:none">
+          <div class="form-group" style="margin-bottom:.75rem">
+            <label style="font-size:.82rem;font-weight:600;color:#475569;display:block;margin-bottom:.35rem">Texto do rodapé</label>
+            <input type="text" id="edit-footer-text"
+                   placeholder="Ex: Exclusivo para comunidade (INF/UFG)"
+                   oninput="updateFooterPreview()"
+                   style="font-size:.875rem">
+          </div>
+          <div style="display:flex;gap:1.5rem;align-items:center;margin-bottom:.85rem;flex-wrap:wrap">
+            <div style="display:flex;align-items:center;gap:.5rem">
+              <div class="color-swatch"><input type="color" id="edit-footer-bg" value="#1e293b" oninput="updateFooterPreview()"></div>
+              <label style="font-size:.82rem;font-weight:600;color:#475569">Fundo</label>
+            </div>
+            <div style="display:flex;align-items:center;gap:.5rem">
+              <div class="color-swatch"><input type="color" id="edit-footer-color" value="#ffffff" oninput="updateFooterPreview()"></div>
+              <label style="font-size:.82rem;font-weight:600;color:#475569">Texto</label>
+            </div>
+            <div style="display:flex;gap:.3rem;align-items:center;margin-left:auto">
+              <span style="font-size:.72rem;color:#94a3b8;margin-right:.2rem">Presets:</span>
+              <button type="button" onclick="setFooterPreset('#1e293b','#ffffff')" style="width:20px;height:20px;border-radius:4px;background:#1e293b;border:1px solid #cbd5e1;cursor:pointer;padding:0" title="Escuro"></button>
+              <button type="button" onclick="setFooterPreset('#6366f1','#ffffff')" style="width:20px;height:20px;border-radius:4px;background:#6366f1;border:1px solid #cbd5e1;cursor:pointer;padding:0" title="Roxo"></button>
+              <button type="button" onclick="setFooterPreset('#f59e0b','#ffffff')" style="width:20px;height:20px;border-radius:4px;background:#f59e0b;border:1px solid #cbd5e1;cursor:pointer;padding:0" title="Âmbar"></button>
+              <button type="button" onclick="setFooterPreset('#16a34a','#ffffff')" style="width:20px;height:20px;border-radius:4px;background:#16a34a;border:1px solid #cbd5e1;cursor:pointer;padding:0" title="Verde"></button>
+              <button type="button" onclick="setFooterPreset('#dc2626','#ffffff')" style="width:20px;height:20px;border-radius:4px;background:#dc2626;border:1px solid #cbd5e1;cursor:pointer;padding:0" title="Vermelho"></button>
+              <button type="button" onclick="setFooterPreset('#ffffff','#1e293b')" style="width:20px;height:20px;border-radius:4px;background:#fff;border:1px solid #cbd5e1;cursor:pointer;padding:0" title="Branco"></button>
+            </div>
+          </div>
+          <div style="font-size:.72rem;font-weight:600;color:#94a3b8;text-transform:uppercase;letter-spacing:.06em;margin-bottom:.4rem">Preview</div>
+          <div class="footer-preview-wrap">
+            <svg viewBox="0 0 60 40" style="opacity:.13;position:absolute;width:100%;height:100%"><rect fill="#94a3b8" width="60" height="40"/><circle fill="#fff" cx="20" cy="15" r="7"/><polygon fill="#fff" points="0,40 25,22 40,32 50,24 60,40"/></svg>
+            <div class="footer-preview-bar" id="footer-preview-bar" style="background:#1e293b;color:#ffffff">Exclusivo para comunidade (INF/UFG)</div>
+          </div>
+        </div>
+        <div id="footer-empty-msg" style="font-size:.82rem;color:#94a3b8">
+          Ative o rodapé para exibir uma faixa personalizada sobre a imagem do produto na loja.
+        </div>
+      </div>
+
+      <!-- ⑥ Configurações -->
       <div class="modal-section" id="config-section" style="display:none">
         <div class="modal-section-title">
           <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.07 4.93a10 10 0 0 1 0 14.14M4.93 4.93a10 10 0 0 0 0 14.14"/></svg>
@@ -601,6 +676,33 @@ function addVariation(id = '', label = '', stock = 0) {
   document.getElementById('variations-list').appendChild(div);
 }
 
+
+// ── Rodapé do card ─────────────────────────────────────────────────────────────────────────────
+function toggleFooter() {
+  const on = document.getElementById('edit-has-footer').checked;
+  document.getElementById('footer-panel').style.display     = on ? 'block' : 'none';
+  document.getElementById('footer-empty-msg').style.display = on ? 'none'  : 'block';
+  document.getElementById('footer-toggle-label').textContent = on ? 'Ativado' : 'Desativado';
+  document.getElementById('footer-toggle-label').style.color = on ? '#4338ca' : '#64748b';
+  if (on) updateFooterPreview();
+}
+
+function updateFooterPreview() {
+  const text  = document.getElementById('edit-footer-text').value  || 'Texto do rodapé';
+  const bg    = document.getElementById('edit-footer-bg').value    || '#1e293b';
+  const color = document.getElementById('edit-footer-color').value || '#ffffff';
+  const bar   = document.getElementById('footer-preview-bar');
+  bar.textContent    = text;
+  bar.style.background = bg;
+  bar.style.color      = color;
+}
+
+function setFooterPreset(bg, color) {
+  document.getElementById('edit-footer-bg').value    = bg;
+  document.getElementById('edit-footer-color').value = color;
+  updateFooterPreview();
+}
+
 // ── Modal open/close ──────────────────────────────────────────────────────────
 function resetUploader(images = []) {
   newFiles.forEach(nf => URL.revokeObjectURL(nf.previewUrl));
@@ -650,6 +752,15 @@ function openModal(product = null) {
 
   // Imagens
   resetUploader(product?.images || (product?.image_url ? [product.image_url] : []));
+
+  // Rodapé
+  const hasFooter = !!(product?.card_footer);
+  document.getElementById('edit-has-footer').checked  = hasFooter;
+  document.getElementById('edit-footer-text').value   = product?.card_footer       || '';
+  document.getElementById('edit-footer-bg').value     = product?.card_footer_bg    || '#1e293b';
+  document.getElementById('edit-footer-color').value  = product?.card_footer_color || '#ffffff';
+  toggleFooter();
+  updateFooterPreview();
 
   document.getElementById('modal').style.display = 'flex';
 }
@@ -713,6 +824,15 @@ async function saveProduct() {
   fd.append('preorder_deadline', mto ? deadline : '');
   fd.append('variations',        JSON.stringify(variations));
   fd.append('keepImages',        JSON.stringify(existingImages.map(i => i.url)));
+
+  // Rodapé do card
+  const hasFooter   = document.getElementById('edit-has-footer').checked;
+  const footerText  = hasFooter ? document.getElementById('edit-footer-text').value.trim() : '';
+  const footerBg    = document.getElementById('edit-footer-bg').value    || '#1e293b';
+  const footerColor = document.getElementById('edit-footer-color').value || '#ffffff';
+  fd.append('card_footer',       footerText);
+  fd.append('card_footer_bg',    footerText ? footerBg    : '#1e293b');
+  fd.append('card_footer_color', footerText ? footerColor : '#ffffff');
   newFiles.forEach(nf => fd.append('images', nf.file));
 
   const saveBtn = document.getElementById('save-btn');

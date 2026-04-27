@@ -54,10 +54,8 @@ function getImages(productId) {
   ).all(productId);
 }
 
-/** Verifica se o prazo de encomenda já passou */
 function deadlinePassed(deadline) {
   if (!deadline) return false;
-  // Compara fim do dia da data limite com agora
   const d = new Date(deadline);
   d.setHours(23, 59, 59, 999);
   return d < new Date();
@@ -89,7 +87,12 @@ router.get('/', (req, res) => {
       image_url:        imgs[0] || p.image_url || null,
       images:           imgs,
       made_to_order:    !!p.made_to_order,
+      in_stock:         !p.made_to_order,
       preorder_expired: expired,
+      // Rodapé do card
+      card_footer:       p.card_footer       || null,
+      card_footer_bg:    p.card_footer_bg    || '#1e293b',
+      card_footer_color: p.card_footer_color || '#ffffff',
       variations:       p.variations_raw
         ? p.variations_raw.split('|').map(v => {
             const [id, label, stock] = v.split(':');
@@ -119,13 +122,20 @@ router.get('/:id', (req, res) => {
   product.variations       = db.prepare(
     'SELECT * FROM product_variations WHERE product_id = ?'
   ).all(product.id);
+  product.card_footer       = product.card_footer       || null;
+  product.card_footer_bg    = product.card_footer_bg    || '#1e293b';
+  product.card_footer_color = product.card_footer_color || '#ffffff';
 
   res.json(product);
 });
 
 // ── POST /api/products — admin ────────────────────────────────────────────────
 router.post('/', requireAuth, upload.array('images', 5), (req, res) => {
-  const { name, description, price, stock, category_id, made_to_order, preorder_deadline } = req.body;
+  const {
+    name, description, price, stock, category_id,
+    made_to_order, preorder_deadline,
+    card_footer, card_footer_bg, card_footer_color,
+  } = req.body;
   const variations = parseJSON(req.body.variations, []);
 
   if (!name?.trim() || !price)
@@ -135,8 +145,10 @@ router.post('/', requireAuth, upload.array('images', 5), (req, res) => {
 
   const r = db.prepare(
     `INSERT INTO products
-       (name, description, price, image_url, stock, category_id, made_to_order, preorder_deadline)
-     VALUES (?, ?, ?, ?, ?, ?, ?, ?)`
+       (name, description, price, image_url, stock, category_id,
+        made_to_order, preorder_deadline,
+        card_footer, card_footer_bg, card_footer_color)
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
   ).run(
     name.trim(),
     description?.trim() || null,
@@ -145,8 +157,10 @@ router.post('/', requireAuth, upload.array('images', 5), (req, res) => {
     parseInt(stock, 10) || 0,
     category_id ? Number(category_id) : null,
     parseBool(made_to_order),
-    // Limpa deadline se não for encomenda ou se estiver vazio
-    parseBool(made_to_order) && preorder_deadline ? preorder_deadline : null
+    parseBool(made_to_order) && preorder_deadline ? preorder_deadline : null,
+    card_footer?.trim() || null,
+    card_footer?.trim() ? (card_footer_bg  || '#1e293b') : '#1e293b',
+    card_footer?.trim() ? (card_footer_color || '#ffffff') : '#ffffff',
   );
 
   const pid    = r.lastInsertRowid;
@@ -174,7 +188,11 @@ router.post('/', requireAuth, upload.array('images', 5), (req, res) => {
 // ── PUT /api/products/:id — admin ─────────────────────────────────────────────
 router.put('/:id', requireAuth, upload.array('images', 5), (req, res) => {
   const { id } = req.params;
-  const { name, description, price, stock, active, category_id, made_to_order, preorder_deadline } = req.body;
+  const {
+    name, description, price, stock, active, category_id,
+    made_to_order, preorder_deadline,
+    card_footer, card_footer_bg, card_footer_color,
+  } = req.body;
   const variations = parseJSON(req.body.variations, []);
   const keepUrls   = parseJSON(req.body.keepImages, []);
 
@@ -207,11 +225,13 @@ router.put('/:id', requireAuth, upload.array('images', 5), (req, res) => {
 
   const firstImg      = keepUrls[0] || newUrls[0] || null;
   const isMadeToOrder = parseBool(made_to_order);
+  const footerText    = card_footer?.trim() || null;
 
   db.prepare(
     `UPDATE products
      SET name=?, description=?, price=?, image_url=?, stock=?, active=?,
-         category_id=?, made_to_order=?, preorder_deadline=?
+         category_id=?, made_to_order=?, preorder_deadline=?,
+         card_footer=?, card_footer_bg=?, card_footer_color=?
      WHERE id=?`
   ).run(
     name.trim(),
@@ -223,6 +243,9 @@ router.put('/:id', requireAuth, upload.array('images', 5), (req, res) => {
     category_id ? Number(category_id) : null,
     isMadeToOrder,
     isMadeToOrder && preorder_deadline ? preorder_deadline : null,
+    footerText,
+    footerText ? (card_footer_bg   || '#1e293b') : '#1e293b',
+    footerText ? (card_footer_color || '#ffffff') : '#ffffff',
     id
   );
 

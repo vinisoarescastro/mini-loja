@@ -45,16 +45,20 @@ db.exec(`
   );
 
   CREATE TABLE IF NOT EXISTS products (
-    id            INTEGER PRIMARY KEY AUTOINCREMENT,
-    name          TEXT    NOT NULL,
-    description   TEXT,
-    price         REAL    NOT NULL,
-    image_url     TEXT,
-    stock         INTEGER NOT NULL DEFAULT 0,
-    active        INTEGER NOT NULL DEFAULT 1,
-    made_to_order INTEGER NOT NULL DEFAULT 0,
-    category_id   INTEGER REFERENCES categories(id),
-    created_at    TEXT    NOT NULL DEFAULT (datetime('now'))
+    id                INTEGER PRIMARY KEY AUTOINCREMENT,
+    name              TEXT    NOT NULL,
+    description       TEXT,
+    price             REAL    NOT NULL,
+    image_url         TEXT,
+    stock             INTEGER NOT NULL DEFAULT 0,
+    active            INTEGER NOT NULL DEFAULT 1,
+    made_to_order     INTEGER NOT NULL DEFAULT 0,
+    category_id       INTEGER REFERENCES categories(id),
+    preorder_deadline TEXT,
+    card_footer       TEXT,
+    card_footer_bg    TEXT    NOT NULL DEFAULT '#1e293b',
+    card_footer_color TEXT    NOT NULL DEFAULT '#ffffff',
+    created_at        TEXT    NOT NULL DEFAULT (datetime('now'))
   );
 
   CREATE TABLE IF NOT EXISTS product_variations (
@@ -135,6 +139,10 @@ const migrations = [
      ip         TEXT    NOT NULL,
      created_at TEXT    NOT NULL DEFAULT (datetime('now'))
    )`,
+  // ── Rodapé do card ─────────────────────────────────────────────────────────
+  "ALTER TABLE products ADD COLUMN card_footer       TEXT",
+  "ALTER TABLE products ADD COLUMN card_footer_bg    TEXT NOT NULL DEFAULT '#1e293b'",
+  "ALTER TABLE products ADD COLUMN card_footer_color TEXT NOT NULL DEFAULT '#ffffff'",
 ];
 
 for (const sql of migrations) {
