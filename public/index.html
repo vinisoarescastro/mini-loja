@@ -352,7 +352,9 @@
       return `
         <div class="product-card">
           <div class="product-card-img-wrap">
-            <img src="..." alt="...">
+            <img src="${p.image_url || (p.images && p.images[0]) || ''}" 
+                alt="${p.name}"
+                onerror="this.style.opacity='0'">
             ${badges ? `<div class="product-card-badges">${badges}</div>` : ''}
             ${p.card_footer ? `
               <div class="product-card-footer"
