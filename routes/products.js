@@ -89,7 +89,6 @@ router.get('/', (req, res) => {
       made_to_order:    !!p.made_to_order,
       in_stock:         !p.made_to_order,
       preorder_expired: expired,
-      // Rodapé do card
       card_footer:       p.card_footer       || null,
       card_footer_bg:    p.card_footer_bg    || '#1e293b',
       card_footer_color: p.card_footer_color || '#ffffff',
@@ -239,7 +238,7 @@ router.put('/:id', requireAuth, upload.array('images', 5), (req, res) => {
     parseFloat(price),
     firstImg,
     parseInt(stock, 10) || 0,
-    active === 'false' || active === false ? 0 : 1,
+    parseBool(active),                                         // ← CORRIGIDO
     category_id ? Number(category_id) : null,
     isMadeToOrder,
     isMadeToOrder && preorder_deadline ? preorder_deadline : null,
