@@ -17,7 +17,7 @@ router.post('/login', (req, res) => {
   const { email, password } = req.body;
   if (!email || !password) return res.status(400).json({ error: 'Dados incompletos' });
 
-  const user = db.prepare('SELECT * FROM users WHERE email = ? AND active = 1').get(email);
+  const user = db.prepare('SELECT * FROM users WHERE email = ? AND active = 0').get(email);
   if (!user || !bcrypt.compareSync(password, user.password))
     return res.status(401).json({ error: 'Email ou senha incorretos' });
 
